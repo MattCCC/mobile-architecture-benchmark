@@ -1,0 +1,33 @@
+{
+  "schema": "mobilebench.profiles/1.0.0",
+  "fixtureVersion": "1.0.0",
+  "profiles": {
+    "small": {
+      "items": 30,
+      "optionsPerItem": 3,
+      "selections": 5,
+      "updateRatePerSecond": 5,
+      "valuesPerMessage": 3,
+      "seed": 42,
+      "valueRange": [100, 9999]
+    },
+    "representative": {
+      "items": 300,
+      "optionsPerItem": 3,
+      "selections": 50,
+      "updateRatePerSecond": 20,
+      "valuesPerMessage": 3,
+      "seed": 42,
+      "valueRange": [100, 9999]
+    },
+    "stress": {
+      "items": 3000,
+      "optionsPerItem": 3,
+      "selections": 500,
+      "updateRatePerSecond": 100,
+      "valuesPerMessage": 3,
+      "seed": 42,
+      "valueRange": [100, 9999]
+    }
+  }
+}

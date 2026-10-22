@@ -1,0 +1,7 @@
+Starting: Intent { cmp=org.example.mobilebench.nativeapp/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: org.example.mobilebench.nativeapp/.MainActivity
+TotalTime: 1143
+WaitTime: 1147
+Complete

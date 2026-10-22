@@ -1,0 +1,33 @@
+// Android library of the RN BenchKit wrapper (TurboModule + Fabric probe), autolinked into expo and repack.
+// Codegen runs through the React Native Gradle plugin from ../package.json `codegenConfig`.
+ext.MobileBenchRnBenchkit = [
+  minSdkVersion: 24,
+  compileSdkVersion: 37
+]
+
+ext.getMobileBenchExtOrDefault = { prop ->
+  if (rootProject.ext.has(prop)) {
+    return rootProject.ext.get(prop)
+  }
+  return MobileBenchRnBenchkit[prop]
+}
+
+apply plugin: "com.android.library"
+if (project.extensions.findByName("kotlin") == null) {
+  apply plugin: "kotlin-android"
+}
+apply plugin: "com.facebook.react"
+
+android {
+  namespace "org.example.mobilebench.benchkit"
+  compileSdkVersion getMobileBenchExtOrDefault("compileSdkVersion")
+
+  defaultConfig {
+    minSdkVersion getMobileBenchExtOrDefault("minSdkVersion")
+    consumerProguardFiles "consumer-rules.pro"
+  }
+}
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+}

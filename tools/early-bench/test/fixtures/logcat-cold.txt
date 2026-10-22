@@ -1,0 +1,9 @@
+--------- beginning of system
+         1792668592.089   659  2061 W ActivityTaskManager: callingPackage for (uid=2000, pid=5176) has no WPC
+         1792668592.112   659  2061 I ActivityTaskManager: START u0 {flg=0x10000000 xflg=0x5 cmp=org.example.mobilebench.nativeapp/.MainActivity} with LAUNCH_MULTIPLE from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+--------- beginning of main
+         1792668592.782  5179  5179 I MobileBench: MB none launch 1 ss=0;pst=124309 t=124401902975
+         1792668592.784  5179  5179 I MobileBench: MB none a11y 1 on=0 t=124403704934
+         1792668593.191  5179  5179 I MobileBench: MB none fui 1 rows=10;h=730;sel=50;seq=0 t=124811096017
+         1792668593.229   659   679 I ActivityTaskManager: Displayed org.example.mobilebench.nativeapp/.MainActivity for user 0: +1s143ms
+         1792668593.232   659   679 I ActivityTaskManager: Fully drawn org.example.mobilebench.nativeapp/.MainActivity: +1s146ms

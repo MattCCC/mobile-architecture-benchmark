@@ -1,0 +1,37 @@
+{
+  "name": "@mobilebench/rn-benchkit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React Native wrapper of the benchmark instrumentation: synchronous marker TurboModule and Fabric draw probe",
+  "license": "Apache-2.0",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "source": "src/index.ts",
+  "files": [
+    "src",
+    "android",
+    "ios",
+    "MobileBenchRnBenchkit.podspec"
+  ],
+  "codegenConfig": {
+    "name": "MobileBenchKitSpec",
+    "type": "all",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "org.example.mobilebench.benchkit"
+    },
+    "ios": {
+      "modulesProvider": {
+        "MobileBenchKit": "MBBenchKit"
+      },
+      "componentProvider": {
+        "MobileBenchProbe": "MBProbeComponentView"
+      },
+      "components": {
+        "MobileBenchProbe": {
+          "className": "MBProbeComponentView"
+        }
+      }
+    }
+  }
+}

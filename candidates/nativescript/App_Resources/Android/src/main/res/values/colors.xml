@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<resources>
+    <!-- Template default action bar colours; the single benchmark accent (design §8.2). -->
+    <color name="ns_primary">#F5F5F5</color>
+    <color name="ns_primaryDark">#757575</color>
+    <color name="ns_accent">#2F6FEB</color>
+    <!-- Benchmark: plain launch-window background (no framework splash image). -->
+    <color name="mb_window_background">#FFFFFF</color>
+</resources>

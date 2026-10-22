@@ -1,0 +1,126 @@
+{
+  "schema": "mobilebench.candidate/1.0.0",
+  "id": "flutter",
+  "displayName": "Flutter",
+  "role": "candidate",
+  "variantOf": null,
+  "family": "flutter",
+  "architectureClass": "cross-platform-own-renderer",
+  "owner": "flutter",
+  "status": { "android": "implemented", "ios": "implemented" },
+  "versions": {
+    "flutter": "3.47.7",
+    "flutterFrameworkRevision": "abaf9c523780a608bd46686fd5e53740a07077f8",
+    "flutterEngineRevision": "deb287481e3ce9468f3434937ced4240a70539ca",
+    "flutterEngineContentHash": "d8a2d6c768c334d53e16277f837970ffa1e2de81",
+    "dart": "3.13.5",
+    "androidGradlePlugin": "9.1.0",
+    "kotlinGradlePlugin": "2.4.0",
+    "gradleWrapper": "9.3.1",
+    "androidCompileSdk": 36,
+    "androidTargetSdk": 36,
+    "androidMinSdk": 24,
+    "androidNdk": "28.2.13676358",
+    "iosDeploymentTarget": "16.4",
+    "dependencies": { "crypto": "3.0.7", "ffi": "2.2.0", "androidx.profileinstaller:profileinstaller": "1.4.1" },
+    "devDependencies": { "flutter_lints": "6.0.0", "fake_async": "1.3.3" },
+    "lockfiles": ["pubspec.lock"]
+  },
+  "platforms": {
+    "android": {
+      "applicationId": "org.example.mobilebench.flutter",
+      "launchActivity": "org.example.mobilebench.flutter/.MainActivity",
+      "contentSurface": "SurfaceView (FlutterActivity default RenderMode.surface)",
+      "contentLayerPattern": "SurfaceView[org.example.mobilebench.flutter/org.example.mobilebench.flutter.MainActivity]*",
+      "contentLayerPatternStatus": "pilot-validate",
+      "uiToolkit": "Flutter widgets (Material 3 theme), own renderer (Impeller default)",
+      "runtime": "Dart AOT (release)",
+      "listPrimitive": "ListView.builder (itemExtent 72)",
+      "navigation": "Navigator 1.0 + MaterialPageRoute (platform default transition)",
+      "animation": "AnimationController + CurvedAnimation(Curves.easeInOut) + SlideTransition/FadeTransition",
+      "streamClient": "in-app replay of the bundled stream (default); a dart:io WebSocket source plugs into the same FrameSource interface (not implemented yet)",
+      "persistence": "dart:io file in Context.getFilesDir(), temp file + atomic rename",
+      "buildClass": "release",
+      "artifacts": {
+        "apk": "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk",
+        "aab": "build/app/outputs/bundle/release/app-release.aab"
+      },
+      "sizeClassification": [
+        { "glob": "lib/*/libflutter.so", "category": "runtime-engine" },
+        { "glob": "lib/*/libapp.so", "category": "app-code", "note": "Dart AOT snapshot: app code and the Flutter framework compiled together, not separable by file" },
+        { "glob": "assets/flutter_assets/assets/fixtures/**", "category": "benchmark-payload" },
+        { "glob": "assets/flutter_assets/**", "category": "assets" },
+        { "glob": "classes*.dex", "category": "framework", "note": "Flutter embedding, profileinstaller, MainActivity" }
+      ]
+    },
+    "ios": {
+      "bundleId": "org.example.mobilebench.flutter",
+      "contentSurface": "FlutterView (CAMetalLayer, Impeller)",
+      "contentLayerPattern": null,
+      "contentLayerPatternStatus": "pilot-validate",
+      "uiToolkit": "Flutter widgets (Material 3 theme), own renderer (Impeller)",
+      "runtime": "Dart AOT on devices; Dart JIT (debug) on the simulator",
+      "listPrimitive": "ListView.builder (itemExtent 72)",
+      "navigation": "Navigator 1.0 + MaterialPageRoute (Cupertino-style default transition)",
+      "animation": "AnimationController + CurvedAnimation(Curves.easeInOut) + SlideTransition/FadeTransition",
+      "streamClient": "in-app replay of the bundled stream (default); dart:io WebSocket planned",
+      "persistence": "dart:io file in Library/Application Support, temp file + atomic rename",
+      "buildClass": { "simulator": "debug", "device": "release" },
+      "buildClassNote": "flutter_tools 3.47.7 builds only debug for simulators (release: 'RELEASE mode is not supported for simulators.')",
+      "artifacts": {
+        "simulatorApp": "build/ios/iphonesimulator/Runner.app",
+        "deviceApp": "build/ios/iphoneos/Runner.app"
+      },
+      "sizeClassification": [
+        { "glob": "Frameworks/Flutter.framework/**", "category": "runtime-engine" },
+        { "glob": "Frameworks/App.framework/App", "category": "app-code", "note": "Dart AOT snapshot (device release); kernel blob in debug simulator builds" },
+        { "glob": "Frameworks/App.framework/flutter_assets/assets/fixtures/**", "category": "benchmark-payload" },
+        { "glob": "Frameworks/App.framework/flutter_assets/**", "category": "assets" }
+      ]
+    }
+  },
+  "toolchains": ["node", "make", "flutter", "jdk17", "android-sdk", "xcode", "ios-sim-runtime"],
+  "remoteLoading": {
+    "R1": { "status": "applicable", "note": "Insights is embedded in the installed artifact" },
+    "R2": { "status": "not-applicable", "reason": "Flutter deferred components exist only for Android (and web) and are delivered as Android dynamic feature modules inside an App Bundle via store delivery; iOS unsupported. Loading Dart code from an arbitrary server is not a supported mechanism.", "source": "https://docs.flutter.dev/perf/deferred-components" },
+    "R3": { "status": "not-applicable", "reason": "as R2", "source": "https://docs.flutter.dev/perf/deferred-components" },
+    "R4": { "status": "not-applicable", "reason": "as R2", "source": "https://docs.flutter.dev/perf/deferred-components" },
+    "R5": { "status": "not-applicable", "reason": "as R2", "source": "https://docs.flutter.dev/perf/deferred-components" },
+    "R6": { "status": "not-applicable", "reason": "as R2", "source": "https://docs.flutter.dev/perf/deferred-components" },
+    "R7": { "status": "not-applicable", "reason": "single runtime: no second UI runtime to communicate with" },
+    "R8": { "status": "applicable", "note": "bridge micro-benchmark not implemented yet (see bridge)" },
+    "R9": { "status": "not-applicable", "reason": "as R2", "source": "https://docs.flutter.dev/perf/deferred-components" }
+  },
+  "bridge": {
+    "applicable": true,
+    "sync": { "mechanism": "dart:ffi synchronous call into native code", "status": "not-implemented" },
+    "async": { "mechanism": "MethodChannel message to the platform thread and reply", "status": "not-implemented" }
+  },
+  "crossRuntime": { "applicable": false, "reason": "single Dart runtime" },
+  "instrumentExpectations": {
+    "android": {
+      "A-F1": "unavailable-expected (FrameTimeline does not cover SurfaceView content)",
+      "A-F2": "pilot",
+      "FrameTimingMetric": "not-valid (no HWUI RenderThread frames for Flutter content)"
+    },
+    "ios": { "XCTHitchMetric": "pilot", "XCTOSSignpostMetric": "unavailable-expected (no UIKit scroll signposts)" }
+  },
+  "adapters": [
+    { "name": "benchkit-dart", "path": "lib/benchkit", "kind": "instrumentation", "note": "interim dart:ffi backends to platform C APIs; switches to the core BenchKit C ABI at integration" }
+  ],
+  "deviations": [
+    { "id": "ios-simulator-debug-only", "text": "iOS simulator builds are debug (JIT); release builds exist for devices only (unsigned here). Simulator results are buildClass debug." },
+    { "id": "interim-benchkit", "text": "Markers come from an interim Dart BenchKit (dart:ffi to ATrace/__android_log_write/clock_gettime on Android; ring buffer + syslog + notify_post + clock_gettime_nsec_np on iOS). bg/fg come from Flutter's AppLifecycleListener, not from platform lifecycle callbacks; marker ordinals restart in a new Flutter engine (activity recreation); a11y, input.*, proc.anchor and mem markers are not implemented." },
+    { "id": "replay-stream-default", "text": "The update stream is an in-app replay of the bundled first 10000 frames per profile on a monotonic absolute schedule (session semantics of the local server: hello, catch-up on reconnect, end frame). mb.server / mb.dataset=network are parsed but not used yet." },
+    { "id": "bridge-not-implemented", "text": "mb.bridgeBench is parsed but the C6 bridge micro-benchmark is not implemented." },
+    { "id": "android-release-unsigned-fallback", "text": "Without out/keys/keystore.properties the release APK is signed with the debug key (Flutter template default)." }
+  ],
+  "confounds": [
+    { "id": "flutter-semantics-forced-on-simulator", "text": "Flutter enables its semantics tree unconditionally on the iOS simulator." },
+    { "id": "framework-unsupported-on-emulator", "text": "Flutter does not officially support release mode on emulators; Android emulator results of the release APK carry this limitation." },
+    { "id": "dart-io-cleartext-policy", "text": "dart:io sockets do not consult Android's network security config or iOS ATS." },
+    { "id": "template-agp", "text": "Flutter template AGP 9.1.0 / Kotlin 2.4.0 differ from the native projects' AGP and therefore the R8 version." },
+    { "id": "new-engine-per-activity", "text": "Activity recreation (A3) starts a new Flutter engine and Dart isolate and parses the fixture again." },
+    { "id": "size-not-separable", "text": "libapp.so / App.framework holds app code and the Flutter framework together." }
+  ]
+}

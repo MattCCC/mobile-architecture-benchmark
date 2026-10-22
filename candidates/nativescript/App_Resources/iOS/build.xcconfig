@@ -1,0 +1,5 @@
+// Merged into the generated Xcode project by the NativeScript CLI.
+// Device builds: set DEVELOPMENT_TEAM here locally (never commit it); simulator builds need no signing.
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+// Benchmark: one deployment target for every candidate (design §13.2).
+IPHONEOS_DEPLOYMENT_TARGET = 16.4;

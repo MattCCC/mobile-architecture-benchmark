@@ -1,0 +1,55 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+**/.xcode.env.local
+
+# Android / Gradle
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+.kotlin/
+
+# signing material (release builds use the local non-distribution key from MB_KEYSTORE_PROPERTIES)
+*.keystore
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+
+# node
+node_modules/
+npm-debug.log
+
+# bundles and generated assets
+*.jsbundle
+/.mb-assets/
+
+# CocoaPods
+**/Pods/
+
+# Tooling caches
+.metro-health-check*
+*.tsbuildinfo
+/coverage

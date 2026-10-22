@@ -1,0 +1,187 @@
+/* Equal-work visual specification (design §8.2): light theme, system font, no images, shadows or gradients,
+   one accent colour #2F6FEB for selected options. Sizes in dp (Android) / pt (iOS). */
+
+Page {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+.header {
+  height: 56;
+  padding: 0 8 0 16;
+}
+
+.title {
+  font-size: 20;
+  vertical-align: middle;
+}
+
+.nav-btn {
+  height: 40;
+  margin-left: 8;
+  padding: 0 12;
+  font-size: 14;
+  text-transform: none;
+  color: #1a1a1a;
+  background-color: #e6e6e6;
+  border-radius: 4;
+  vertical-align: middle;
+  android-elevation: 0;
+  android-dynamic-elevation-offset: 0;
+}
+
+.status-row {
+  height: 32;
+  padding: 0 16;
+}
+
+.status-chip {
+  font-size: 12;
+  padding: 2 8;
+  color: #1a1a1a;
+  background-color: #e6e6e6;
+  border-radius: 10;
+  vertical-align: middle;
+}
+
+.digest {
+  font-size: 8;
+  color: #c0c0c0;
+  vertical-align: middle;
+}
+
+.summary {
+  height: 48;
+  padding: 0 16;
+  background-color: #f2f2f2;
+}
+
+.summary-text {
+  font-size: 14;
+  vertical-align: middle;
+}
+
+.row {
+  padding: 0 16;
+  background-color: #ffffff;
+}
+
+.row-label {
+  font-size: 16;
+}
+
+.row-group {
+  font-size: 14;
+  color: #5a5a5a;
+}
+
+.opt {
+  width: 80;
+  height: 40;
+  margin-left: 8;
+  padding: 0;
+  font-size: 14;
+  text-transform: none;
+  color: #1a1a1a;
+  background-color: #e6e6e6;
+  border-radius: 4;
+  vertical-align: middle;
+  android-elevation: 0;
+  android-dynamic-elevation-offset: 0;
+}
+
+.opt.sel {
+  color: #ffffff;
+  background-color: #2f6feb;
+}
+
+.sel-entry {
+  font-size: 16;
+  padding: 0 16;
+  vertical-align: middle;
+}
+
+.sel-total {
+  font-size: 16;
+  padding: 0 16;
+  vertical-align: middle;
+  background-color: #f2f2f2;
+}
+
+.detail {
+  padding: 16;
+}
+
+.detail-title {
+  font-size: 20;
+}
+
+.detail-group {
+  font-size: 14;
+  color: #5a5a5a;
+  margin-bottom: 8;
+}
+
+.detail-value {
+  font-size: 16;
+  margin-right: 16;
+}
+
+.toggle-btn {
+  height: 40;
+  margin-top: 16;
+  font-size: 14;
+  text-transform: none;
+  color: #1a1a1a;
+  background-color: #e6e6e6;
+  border-radius: 4;
+  horizontal-align: left;
+  padding: 0 16;
+  android-elevation: 0;
+  android-dynamic-elevation-offset: 0;
+}
+
+.panel {
+  height: 160;
+  margin-top: 16;
+  padding: 16;
+  background-color: #eef3fd;
+  border-radius: 4;
+  vertical-align: top;
+}
+
+.panel-title {
+  font-size: 16;
+}
+
+.panel-text {
+  font-size: 14;
+  color: #5a5a5a;
+}
+
+.insights {
+  padding: 16;
+}
+
+.section {
+  font-size: 14;
+  color: #5a5a5a;
+  margin-top: 12;
+}
+
+.insights-text {
+  font-size: 16;
+}
+
+.insights-source {
+  font-size: 14;
+  margin-top: 12;
+}
+
+.error {
+  padding: 16;
+}
+
+.error-text {
+  font-size: 16;
+}

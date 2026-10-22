@@ -1,0 +1,100 @@
+{
+  "schema": "mobilebench.candidate/1.0.0",
+  "id": "nativescript",
+  "displayName": "NativeScript (core + TypeScript)",
+  "role": "candidate",
+  "variantOf": null,
+  "family": "nativescript",
+  "architectureClass": "cross-platform-js-native-widgets",
+  "owner": "nativescript",
+  "status": { "android": "implemented", "ios": "implemented" },
+  "platforms": {
+    "android": {
+      "applicationId": "org.example.mobilebench.nativescript",
+      "contentSurface": "activity-window",
+      "uiToolkit": "Android Views via @nativescript/core",
+      "runtime": "V8 (NativeScript Android runtime); JavaScript shipped as minified ESM bundles, no bytecode",
+      "listPrimitive": "@nativescript/core ListView (android.widget.ListView with a BaseAdapter), fixed rowHeight 72",
+      "navigation": "@nativescript/core Frame (default transitions)",
+      "animation": "View.animate (translateY + opacity, cubicBezier(0.42, 0, 0.58, 1), 300 ms)",
+      "streamClient": "in-app replay of the bundled, golden-verified stream behind the transport interface (default); WebSocket transport not implemented yet",
+      "persistence": "file in the app files directory, temp file + rename",
+      "artifacts": { "apk": "build/android/app-arm64-release.apk" },
+      "sizeClassification": [
+        { "glob": "lib/*/libNativeScript.so", "category": "runtime-engine" },
+        { "glob": "assets/app/vendor.mjs", "category": "framework-code" },
+        { "glob": "assets/app/runtime.mjs", "category": "framework-code" },
+        { "glob": "assets/app/bundle.mjs", "category": "app-code" },
+        { "glob": "assets/metadata/*", "category": "runtime-metadata" },
+        { "glob": "assets/mobilebench/*.stream.jsonl", "category": "benchmark-data" }
+      ]
+    },
+    "ios": {
+      "bundleId": "org.example.mobilebench.nativescript",
+      "contentSurface": "uikit-views",
+      "uiToolkit": "UIKit via @nativescript/core",
+      "runtime": "V8 (NativeScript iOS runtime, NativeScript/ios-spm Swift package); JavaScript shipped as minified ESM bundles",
+      "listPrimitive": "@nativescript/core ListView (UITableView), fixed rowHeight 72",
+      "navigation": "@nativescript/core Frame (UINavigationController, default transitions)",
+      "animation": "View.animate (translateY + opacity, cubicBezier(0.42, 0, 0.58, 1), 300 ms)",
+      "streamClient": "in-app replay of the bundled, golden-verified stream behind the transport interface (default); WebSocket transport not implemented yet",
+      "persistence": "file in Application Support, atomic write",
+      "buildClass": { "simulator": "release" },
+      "artifacts": { "app": "build/ios/MBNativeScript.app" },
+      "sizeClassification": [
+        { "glob": "Frameworks/NativeScript.framework/**", "category": "runtime-engine" },
+        { "glob": "app/vendor.mjs", "category": "framework-code" },
+        { "glob": "app/runtime.mjs", "category": "framework-code" },
+        { "glob": "app/bundle.mjs", "category": "app-code" },
+        { "glob": "app/generated/stream/*.stream.jsonl", "category": "benchmark-data" }
+      ]
+    }
+  },
+  "toolchains": ["node", "jdk17", "android-sdk", "xcode", "ios-sim-runtime", "ruby-xcodeproj"],
+  "versions": {
+    "nativescript-cli": "9.1.2",
+    "@nativescript/core": "9.1.3",
+    "@nativescript/android": "9.1.1",
+    "@nativescript/ios": "9.1.0",
+    "@nativescript/webpack": "5.0.39",
+    "@nativescript/types": "9.1.4",
+    "typescript": "6.0.3",
+    "template": "@nativescript/template-blank-ts 9.1.1 (App_Resources starting point)"
+  },
+  "remoteLoading": {
+    "R1": { "status": "applicable", "reason": "Insights is part of the installed artifact (embedded mode)." },
+    "R2": { "status": "not-applicable", "reason": "No runtime code-loading mechanism is documented for NativeScript; the CLI's bundler options (webpack, rspack, vite) are build-time only.", "source": "https://docs.nativescript.org/llms.txt" },
+    "R3": { "status": "not-applicable", "reason": "As R2.", "source": "https://docs.nativescript.org/llms.txt" },
+    "R4": { "status": "not-applicable", "reason": "As R2.", "source": "https://docs.nativescript.org/llms.txt" },
+    "R5": { "status": "not-applicable", "reason": "As R2.", "source": "https://docs.nativescript.org/llms.txt" },
+    "R6": { "status": "not-applicable", "reason": "As R2.", "source": "https://docs.nativescript.org/llms.txt" },
+    "R7": { "status": "not-applicable", "reason": "Single JavaScript runtime; no second UI runtime to communicate with." },
+    "R8": { "status": "applicable", "reason": "JavaScript calls native APIs through the NativeScript runtime's synchronous marshalling." },
+    "R9": { "status": "not-applicable", "reason": "As R2.", "source": "https://docs.nativescript.org/llms.txt" }
+  },
+  "bridge": {
+    "sync": { "mechanism": "NativeScript direct native call (synchronous marshalling on the UI thread)" },
+    "async": { "status": "not-applicable", "reason": "NativeScript calls native APIs directly and synchronously; it has no asynchronous bridge." }
+  },
+  "crossRuntime": { "applicable": false, "reason": "single JavaScript runtime" },
+  "contentLayerPattern": { "android": "*org.example.mobilebench.nativescript/com.tns.NativeScriptActivity*" },
+  "instrumentExpectations": {
+    "android": { "A-F1": "expected-valid", "A-F2": "expected-valid" },
+    "ios": { "XCTHitchMetric": "pilot", "XCTOSSignpostMetric": "expected-valid" }
+  },
+  "adapters": [
+    { "name": "nativescript-benchkit", "path": "app/platform", "kind": "instrumentation" }
+  ],
+  "deviations": [
+    { "id": "benchkit-candidate-local", "summary": "BenchKit is implemented inside the candidate (TypeScript over direct native calls) because the shared BenchKit libraries do not exist yet; iOS has no OSSignposter events, touch observer, proc.anchor or memory checkpoints." },
+    { "id": "stream-replay-transport", "summary": "The default data source replays the bundled stream frames in-app on the monotonic clock with the server's absolute schedule; checkpoints come from the end frame (mb.replayCount) and from background only, because there is no control channel." },
+    { "id": "launch-config-subset", "summary": "mb.server, mb.token, mb.dataset=network, mb.remote=remote, mb.bridgeBench and mb.layoutProbe are not implemented; such values are reported as launch-config-invalid and the defaults are used." },
+    { "id": "template-deviations", "summary": "@nativescript/theme and the template splash/launch images are not used, storage permissions are removed, allowBackup is off, orientation is portrait only." },
+    { "id": "r8-broad-keep-rules", "summary": "R8 is on with keep rules for the runtime, androidx, material and kotlin packages and without renaming; resource shrinking is off because resources are resolved by name from JavaScript." }
+  ],
+  "confounds": [
+    { "id": "framework-android-toolchain", "summary": "The NativeScript Android runtime pins its own Gradle/AGP (8.14.3 / 8.12.1), so the R8 version differs from other candidates." },
+    { "id": "benchmark-data-in-artifact", "summary": "The replay stream files (about 0.46 MB per profile, uncompressed) are bundled in the artifact; size reports must subtract the benchmark-data category." },
+    { "id": "in-app-stream-timer", "summary": "Updates are produced by an in-app timer instead of arriving from a socket; the receive path differs from candidates that use the WebSocket stream." }
+  ]
+}

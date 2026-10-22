@@ -1,0 +1,128 @@
+{
+  "schema": "mobilebench.candidate/1.0.0",
+  "id": "repack",
+  "displayName": "React Native (Re.Pack, Module Federation remote)",
+  "role": "candidate",
+  "variantOf": null,
+  "family": "react-native",
+  "architectureClass": "cross-platform-js-native-widgets",
+  "owner": "rn-family",
+  "status": { "android": "implemented", "ios": "implemented" },
+  "versions": {
+    "react-native": "0.88.0",
+    "react": "19.3.0",
+    "@callstack/repack": "5.4.2",
+    "@rspack/core": "1.7.12",
+    "@module-federation/enhanced": "2.9.2",
+    "@module-federation/runtime": "2.9.2",
+    "@react-navigation/native": "7.5.1",
+    "@react-navigation/native-stack": "7.21.0",
+    "react-native-screens": "4.30.0",
+    "react-native-safe-area-context": "5.10.1",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/cli": "20.2.0",
+    "@react-native/js-polyfills": "0.88.0",
+    "hermes-compiler": "260318099.0.4",
+    "typescript": "6.0.3",
+    "gradle": "9.4.1",
+    "android-gradle-plugin": "9.2.1",
+    "kotlin": "2.2.0",
+    "alignmentNote": "React Native, React, react-native-screens, safe-area-context and AsyncStorage are the versions Expo SDK 58 (expo 58.0.17 bundledNativeModules.json) selects, so `repack` and `expo` share RN 0.88.0, Hermes V1 and the New Architecture (design §14.4)"
+  },
+  "settings": {
+    "jsEngine": "Hermes V1 (bytecode)",
+    "newArchitecture": true,
+    "edgeToEdge": true,
+    "theme": "light"
+  },
+  "platforms": {
+    "android": {
+      "applicationId": "org.example.mobilebench.repack",
+      "launchActivity": "org.example.mobilebench.repack/.MainActivity",
+      "minSdk": 24,
+      "compileSdk": 37,
+      "targetSdk": 36,
+      "abis": ["arm64-v8a"],
+      "abiMechanism": "android/gradle.properties reactNativeArchitectures=arm64-v8a",
+      "release": "R8 minify + shrinkResources (enableProguardInReleaseBuilds = true), Hermes V1 bytecode of the Rspack bundle, profileinstaller 1.4.1, <profileable android:shell=\"true\"/>, local non-distribution key",
+      "contentSurface": "activity-window",
+      "contentLayerPattern": "org.example.mobilebench.repack/org.example.mobilebench.repack.MainActivity*",
+      "uiToolkit": "Android Views via React Native Fabric",
+      "runtime": "Hermes V1 bytecode",
+      "bundler": "Re.Pack 5 (Rspack 1)",
+      "listPrimitive": "FlatList",
+      "navigation": "React Navigation native-stack (react-native-screens)",
+      "animation": "Animated (useNativeDriver)",
+      "streamClient": "in-app replay of the bundled stream (default); React Native WebSocket with mb.source=websocket",
+      "persistence": "@react-native-async-storage/async-storage",
+      "artifacts": { "apk": "build/android/app-arm64-release.apk", "remote": "build/remote/android/<version>/" },
+      "sizeClassification": [
+        { "glob": "lib/*/libhermes*.so", "category": "runtime-engine" },
+        { "glob": "lib/*/lib*.so", "category": "framework" },
+        { "glob": "classes*.dex", "category": "framework" },
+        { "glob": "assets/index.android.bundle", "category": "app-code" },
+        { "glob": "res/**", "category": "assets" }
+      ]
+    },
+    "ios": {
+      "bundleId": "org.example.mobilebench.repack",
+      "deploymentTarget": "16.4",
+      "deviceFamily": "iphone",
+      "release": "Release configuration, Hermes V1 bytecode, simulator arm64, unsigned (CODE_SIGNING_ALLOWED=NO)",
+      "contentSurface": "uikit-views",
+      "uiToolkit": "UIKit via React Native Fabric",
+      "runtime": "Hermes V1 bytecode",
+      "bundler": "Re.Pack 5 (Rspack 1)",
+      "listPrimitive": "FlatList",
+      "navigation": "React Navigation native-stack (react-native-screens)",
+      "animation": "Animated (useNativeDriver)",
+      "streamClient": "in-app replay of the bundled stream (default); React Native WebSocket with mb.source=websocket",
+      "persistence": "@react-native-async-storage/async-storage",
+      "artifacts": { "simulatorApp": "build/ios/MBRnRepack.app", "remote": "build/remote/ios/<version>/" }
+    }
+  },
+  "toolchains": ["node", "jdk17", "android-sdk", "xcode", "ios-sim-runtime", "cocoapods"],
+  "remoteLoading": {
+    "R1": { "status": "applicable" },
+    "R2": { "status": "applicable", "mechanism": "Module Federation 2 remote `MbInsights` (manifest + container + chunks) loaded by Re.Pack ScriptManager: the indirection /v1/modules/repack/<platform>/current/manifest.json ({\"version\":\"<v>\"}) names the active version, then /v1/modules/repack/<platform>/<v>/mf-manifest.json is registered" },
+    "R3": { "status": "applicable", "mechanism": "ScriptManager cache persisted with AsyncStorage (setStorage)" },
+    "R4": { "status": "applicable" },
+    "R5": { "status": "applicable" },
+    "R6": { "status": "applicable" },
+    "R7": { "status": "not-applicable", "reason": "single JS runtime: no second UI runtime to communicate with" },
+    "R8s": { "status": "applicable" },
+    "R8a": { "status": "applicable" },
+    "R9": { "status": "applicable", "mechanism": "new remote version (make remote-repack-<platform> MB_REPACK_VERSION=<v>) activated by the server indirection; every artifact URL contains the version, so ScriptManager fetches the new container instead of serving the cached old one; whole remote container, no diff" }
+  },
+  "remoteIntegrity": "Re.Pack CodeSigningPlugin signs the remote chunks at build time (key pair from candidates/_rn-shared/tools/ensure-signing-keys.mjs, never committed); the chunks are compiled to Hermes bytecode inside the compilation before signing (rspack.hermes.mjs: Re.Pack 5.4.2's HermesBytecodePlugin compiles after emit and would drop the signature), and scripts/verify-remote.mjs fails the remote build unless every served chunk is bytecode with a signature that verifies against the host key; the host resolver returns verifyScriptSignature \"strict\" with the build-time public key compiled into the installed bundle (no publicKeyPath, no in-place plist/strings edits); a rejected signature is reported as remote.error code=remote-checksum",
+  "bridge": {
+    "sync": { "mechanism": "TurboModule synchronous method through JSI (MobileBenchKit.echo)" },
+    "async": { "mechanism": "TurboModule Promise method (MobileBenchKit.echoAsync)" }
+  },
+  "crossRuntime": { "applicable": false, "reason": "single JS runtime" },
+  "instrumentExpectations": {
+    "android": { "A-F1": "expected-valid", "A-F2": "expected-valid", "FrameTimingMetric": "diagnostic" },
+    "ios": { "XCTHitchMetric": "pilot", "XCTOSSignpostMetric": "expected-valid" }
+  },
+  "adapters": [
+    { "name": "rn-benchkit", "path": "../_rn-shared/rn-benchkit", "kind": "instrumentation" },
+    { "name": "rn-ui", "path": "../_rn-shared/ui", "kind": "shared-ui" },
+    { "name": "mb-runtime-plugin", "path": "src/mfRuntimePlugin.ts", "kind": "remote-loading" }
+  ],
+  "deviations": [
+    "Candidate id and directory are `repack` (application id org.example.mobilebench.repack) as assigned to this branch; design.md §13.3/§14.3 names it `rn-repack` (org.example.mobilebench.rnrepack). The integration step decides the final id.",
+    "Update stream: default source is the in-app replay of the bundled first 10000 messages (generated from fixtures/generator and verified against golden.json at build time) on the server's absolute schedule; the WebSocket source of design §7.5 is implemented and selected with mb.source=websocket (PoC launch key), pending the local server.",
+    "Instrumentation: the RN BenchKit wrapper implements the marker core in Kotlin / Objective-C++ until the shared C-ABI core exists; Android sections use android.os.Trace instead of NDK ATrace.",
+    "Marker mirror (PoC): logcat / os_log lines carry two extra tokens `t=<monotonic ns> w=<wall us>`; the control set also mirrors proc.anchor, ctr (and mem on iOS); `state` payload is `k=<k>;s=<seq>;d=<16 hex>` (k added); diagnostic markers `list.layout` and `bridge`; unknown launch keys are reported as `err code=launch-config-unknown-key;n=<count>`.",
+    "Accessibility IDs: `mb.nav.back` is not exposed (native-stack header back control; Android uses system back). PoC additions on the Selection screen: `mb.selection.<i>` per entry and `mb.selection.total`.",
+    "Restoration record v2 is stored with AsyncStorage (atomic writes by the library) instead of a temp file + rename.",
+    "`remote.request` is emitted when the Insights screen mounts, not at the tap; the remote base URL comes from mb.server at launch (registerRemotes), not from the build. The indirection document format {\"version\":\"<v>\"} is this PoC's choice: design §15.2 specifies current/manifest.json only as \"manifest JSON\".",
+    "mb.clearModuleCache=1 calls ScriptManager.invalidateScripts(); clearing URLCache.shared on iOS (design §8.10) is not implemented yet.",
+    "Remote chunks are compiled to Hermes bytecode by the project plugin rspack.hermes.mjs (same hermesc and flags as Re.Pack: -w -O -output-source-map) instead of Re.Pack's HermesBytecodePlugin: in Re.Pack 5.4.2 that plugin runs after CodeSigningPlugin, so the shipped bytecode carried no signature and strict verification rejected every chunk. Remote chunks ship without source maps.",
+    "iOS device family is iPhone only, equal for both RN candidates."
+  ],
+  "confounds": [
+    "navigation-library: React Navigation native-stack here vs expo-router Stack in `expo` (both on react-native-screens 4.30.0)",
+    "bundler: Rspack (Re.Pack) here vs Metro in `expo`; the host bundle also contains the Module Federation runtime"
+  ]
+}

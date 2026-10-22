@@ -1,0 +1,9 @@
+# Local non-distribution signing key (tools/ensure-keystore.sh); never committed.
+/.keys/
+# Never install dependencies here: shared code resolves from each consuming app's node_modules.
+node_modules/
+.DS_Store
+# rn-benchkit is linked with file: by both RN candidates, so their Gradle builds compile it in place.
+/rn-benchkit/android/build/
+/rn-benchkit/android/.cxx/
+/rn-benchkit/android/.gradle/

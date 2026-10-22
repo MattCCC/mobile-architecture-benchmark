@@ -1,0 +1,25 @@
+# Generated workload (make prepare-native)
+/generated/
+
+# Android build outputs, local SDK config, keys
+/android/.gradle/
+/android/.kotlin/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/.keys/
+*.jks
+*.keystore
+keystore.properties
+/android/.idea/
+*.iml
+
+# iOS build outputs and per-user Xcode state
+/ios/build/
+/ios/DerivedData/
+/ios/Core/.build/
+/ios/Core/.swiftpm/
+xcuserdata/
+*.xcuserstate
+
+.DS_Store

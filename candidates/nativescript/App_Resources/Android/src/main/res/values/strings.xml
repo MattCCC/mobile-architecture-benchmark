@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Display name pattern "MB <Candidate>" (design §13.2). -->
+    <string name="app_name">MB NativeScript</string>
+    <string name="title_activity_kimera">MB NativeScript</string>
+</resources>

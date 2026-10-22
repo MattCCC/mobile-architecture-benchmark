@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "MB Expo",
+    "slug": "mobilebench-expo",
+    "scheme": "mobilebenchexpo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFFFFF",
+    "ios": {
+      "bundleIdentifier": "org.example.mobilebench.expo",
+      "supportsTablet": false,
+      "deploymentTarget": "16.4",
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true,
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        },
+        "NSLocalNetworkUsageDescription": "Connects to the local benchmark server.",
+        "UIUserInterfaceStyle": "Light"
+      }
+    },
+    "android": {
+      "package": "org.example.mobilebench.expo",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "buildArchs": ["arm64-v8a"]
+          }
+        }
+      ],
+      "./plugins/withMobileBench"
+    ],
+    "experiments": {
+      "tsconfigPaths": false,
+      "typedRoutes": false
+    }
+  }
+}

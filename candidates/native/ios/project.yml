@@ -1,0 +1,85 @@
+# XcodeGen 2.46.0 project spec for the fully native iOS candidate (UIKit).
+# The generated MobileBenchNative.xcodeproj is committed; regenerate with `make xcodeproj-native`
+# (xcodegen generate --spec candidates/native/ios/project.yml). The repository-local generator tools/xcodeproj
+# (design §20.4) does not exist yet; this spec is the documented fallback.
+name: MobileBenchNative
+options:
+  bundleIdPrefix: org.example.mobilebench
+  deploymentTarget:
+    iOS: "16.4"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.4"
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+    DEAD_CODE_STRIPPING: "YES"
+  configs:
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+      SWIFT_COMPILATION_MODE: wholemodule
+packages:
+  MobileBenchCore:
+    path: Core
+targets:
+  MobileBenchNative:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes:
+          - Info.plist
+      - path: ../generated/assets/fixtures
+        type: folder
+        buildPhase: resources
+        optional: true
+    dependencies:
+      - package: MobileBenchCore
+    settings:
+      base:
+        INFOPLIST_FILE: App/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: org.example.mobilebench.nativeapp
+        PRODUCT_NAME: MobileBenchNative
+        GENERATE_INFOPLIST_FILE: "NO"
+        # Simulator builds are signed ad hoc; device builds override DEVELOPMENT_TEAM, CODE_SIGN_STYLE,
+        # CODE_SIGN_IDENTITY and PRODUCT_BUNDLE_IDENTIFIER from MB_IOS_TEAM_ID / MB_BUNDLE_PREFIX (see README).
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+  # Pre-harness black-box smoke journey (XCUITest); superseded by the core acceptance suite (drivers/ios).
+  MobileBenchNativeSmokeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: SmokeUITests
+    dependencies:
+      - target: MobileBenchNative
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.example.mobilebench.nativeapp.smokeuitests
+        GENERATE_INFOPLIST_FILE: "YES"
+        TEST_TARGET_NAME: MobileBenchNative
+        # Test code only; Swift 5 language mode avoids strict-concurrency noise from XCUITest APIs.
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+schemes:
+  MobileBenchNative:
+    build:
+      targets:
+        MobileBenchNative: all
+        MobileBenchNativeSmokeUITests: [test]
+    run:
+      config: Release
+    test:
+      config: Release
+      targets:
+        - MobileBenchNativeSmokeUITests
+    archive:
+      config: Release

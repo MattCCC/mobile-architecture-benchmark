@@ -1,0 +1,38 @@
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build outputs
+build/
+dist/
+.gradle/
+.cxx/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+DerivedData/
+Pods/
+xcuserdata/
+*.apk
+*.aab
+*.ipa
+
+# Local configuration and signing material (never committed)
+local.properties
+*.jks
+*.p12
+*.mobileprovision
+.env
+.env.*
+!.env.example
+.xcode.env.local
+
+# Local benchmark run output
+results/local/
+*.log

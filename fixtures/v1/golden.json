@@ -1,0 +1,188 @@
+{
+  "schema": "mobilebench.golden/1.0.0",
+  "fixtureVersion": "1.0.0",
+  "generator": {
+    "prng": "mulberry32",
+    "algorithmVersion": 1,
+    "purposes": {
+      "values": 1,
+      "groups": 2,
+      "selection": 3,
+      "stream": 4
+    }
+  },
+  "digestRules": {
+    "state": "sha256 of mb-state-v1 text, every line LF-terminated; selection = initial fixture selection",
+    "insights": "sha256 of mb-insights-v1 text, every line LF-terminated"
+  },
+  "profiles": {
+    "small": {
+      "file": "small.json",
+      "sha256": "43467278d6dfb68e18c6c2724f189e3ca70bae6314db380eaf8a729c485b384a",
+      "bytes": 1867,
+      "items": 30,
+      "selections": 5,
+      "updateRatePerSecond": 5,
+      "valuesPerMessage": 3,
+      "seed": 42,
+      "seq0Summary": {
+        "selectedCount": 5,
+        "total": 33193,
+        "totalText": "331.93"
+      },
+      "stateDigests": [
+        {
+          "seq": 0,
+          "digest": "887b2ec3c85e1cef64c906aec05796b5b33d3cf66072e2827097922bc0cbf23d"
+        },
+        {
+          "seq": 100,
+          "digest": "d023235d63a35e2bf6720bbfe444d4ca0bf90c201bc16ea73659b895a10e9596"
+        },
+        {
+          "seq": 1000,
+          "digest": "329ec0c665c109acae29de8e4cd09b0dc822e244b991a844f7eed419245dd068"
+        },
+        {
+          "seq": 10000,
+          "digest": "23f840aeecd520d9a89ff26b892aca3618773267f589f47803f9e529ddd12786"
+        }
+      ],
+      "insightsDigests": [
+        {
+          "seq": 0,
+          "digest": "25341fe10d6ea55f850cc33c57f42fe69a08a2ac5f5ee008ab56e5e2b3126ad8"
+        },
+        {
+          "seq": 100,
+          "digest": "66d5a3d142f88f15d8ede8a42a8e98b5b4872ccc941a8e009232574b21e116cb"
+        },
+        {
+          "seq": 1000,
+          "digest": "21833b5061335c1c922e346fb3bb5ce43206b4c8e99b0d78ec17eb010b18c912"
+        },
+        {
+          "seq": 10000,
+          "digest": "2047dee54393e58de4ae63a8d56a401fb4f52d58bf9af362d988dd6a519118d0"
+        }
+      ],
+      "stream": {
+        "messages": 10000,
+        "serialization": "update frames seq 1..messages, wire form, each followed by LF",
+        "sha256": "ca49b2ed5c5c583212782db2af39cdae07e3e893b409b8dd9d3750086def0286"
+      }
+    },
+    "representative": {
+      "file": "representative.json",
+      "sha256": "e3ca6396851152171f7f42ae05063d90f446baf0a7a9d4d5a51c7b1d20829e19",
+      "bytes": 16658,
+      "items": 300,
+      "selections": 50,
+      "updateRatePerSecond": 20,
+      "valuesPerMessage": 3,
+      "seed": 42,
+      "seq0Summary": {
+        "selectedCount": 50,
+        "total": 191327,
+        "totalText": "1913.27"
+      },
+      "stateDigests": [
+        {
+          "seq": 0,
+          "digest": "136817344468b84bb2c23ddc7e0d7e06ef2e090e1fdc6b770340471f8454c3bf"
+        },
+        {
+          "seq": 100,
+          "digest": "de4edb34e2209d8c7890927c0e7c8dcfd93a7065176aa7293fbd6474fffe6557"
+        },
+        {
+          "seq": 1000,
+          "digest": "419b022c2bc0866d6dbbe8094e8dd280f918637c67658c41fcf66c75b4524ce0"
+        },
+        {
+          "seq": 10000,
+          "digest": "d7a6134486c63d80d1bc4e3a80744f03472e4ac19c633a65ea017c4263ca35c2"
+        }
+      ],
+      "insightsDigests": [
+        {
+          "seq": 0,
+          "digest": "42361f1256a60f28d231a507911c4ff0538c7cf10f52c1c9817858b7dffdf8d6"
+        },
+        {
+          "seq": 100,
+          "digest": "4bc2ef3cb6a1912a25dadf3ac6e37a52cbc74679aba958896e164a17814a66cc"
+        },
+        {
+          "seq": 1000,
+          "digest": "c152f8bff6e119ca4df5625244a4c9ad98a5ce3eb94c359364954c7c73e6f58e"
+        },
+        {
+          "seq": 10000,
+          "digest": "26c30c4f848876c3c30a95e107d2bf6a561a7b59a9da9baf96e84f4613a5c088"
+        }
+      ],
+      "stream": {
+        "messages": 10000,
+        "serialization": "update frames seq 1..messages, wire form, each followed by LF",
+        "sha256": "0a0e89bca7906eb37962c3e0d614af41f61d29fc8219d6cd85278119ae57cb20"
+      }
+    },
+    "stress": {
+      "file": "stress.json",
+      "sha256": "95c1d99cdc1e483da945734bb0d2d0a33cb327854fe362f101748ff803b5d62d",
+      "bytes": 167692,
+      "items": 3000,
+      "selections": 500,
+      "updateRatePerSecond": 100,
+      "valuesPerMessage": 3,
+      "seed": 42,
+      "seq0Summary": {
+        "selectedCount": 500,
+        "total": 2592379,
+        "totalText": "25923.79"
+      },
+      "stateDigests": [
+        {
+          "seq": 0,
+          "digest": "d2741f983af29091d8b7d75913cffce105db6e922422a3efd6cc907b5528bda0"
+        },
+        {
+          "seq": 100,
+          "digest": "3f3e93d9e3ae45cb5f743be276955b48247de398fe25f8d3f89768563a2578f6"
+        },
+        {
+          "seq": 1000,
+          "digest": "7d6d560ba9dc41f422186b5ddeab2a45291a6295af4480aea59c8d55f605e1dd"
+        },
+        {
+          "seq": 10000,
+          "digest": "5a61e3d6cd42f3e2aed8cba30cb0e723298b7266ec3888179ef0534051badc0c"
+        }
+      ],
+      "insightsDigests": [
+        {
+          "seq": 0,
+          "digest": "ce38c9307d11a39d0fbf75e852a7a2fdccab05daa36bda7172161a66bc365a4c"
+        },
+        {
+          "seq": 100,
+          "digest": "397738c2a02e3fe3c0fcb817ae6e1d5ac1275ca7769d70d0c76fa05c24c9f039"
+        },
+        {
+          "seq": 1000,
+          "digest": "03c52525cfbab188b53882d62638940607018d762ac2308795e0c34bdc246f38"
+        },
+        {
+          "seq": 10000,
+          "digest": "1322c8369ab65b5963f277138d0e4fd26fdc4a898645f9e39f6764bf1e321e0c"
+        }
+      ],
+      "stream": {
+        "messages": 10000,
+        "serialization": "update frames seq 1..messages, wire form, each followed by LF",
+        "sha256": "70ffcf9b5156cdcf87d0b3e5b5a6e47928e2d8ab93452884260f1c99fc0d4e4e"
+      }
+    }
+  }
+}

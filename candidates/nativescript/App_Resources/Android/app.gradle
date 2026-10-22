@@ -1,0 +1,37 @@
+// App-level Gradle settings, applied by the NativeScript Android runtime after its own defaults.
+// Starting point: @nativescript/template-blank-ts 9.1.1; benchmark changes are marked "benchmark".
+dependencies {
+  // benchmark: Macrobenchmark profile handling (design §13.2)
+  implementation 'androidx.profileinstaller:profileinstaller:1.4.1'
+}
+
+android {
+  compileSdkVersion 36
+  buildToolsVersion "36"
+  defaultConfig {
+    minSdkVersion 24
+    targetSdkVersion 36
+    versionCode 1
+    versionName "1.0.0"
+    generatedDensities = []
+    // benchmark: single-ABI measurement builds (design §13.1). The runtime pre-fills four ABIs, so the set is
+    // replaced, not extended. Override with -PmbAbis=<abi>[,<abi>] (for example x86_64 for CI acceptance builds).
+    ndk {
+      abiFilters.clear()
+      abiFilters((project.findProperty('mbAbis') ?: 'arm64-v8a').toString().split(',')*.trim() as String[])
+    }
+  }
+  buildTypes {
+    release {
+      // benchmark: R8 on (design §13.1). Resource shrinking stays off: NativeScript resolves resources by name
+      // from JavaScript (Resources.getIdentifier), which the resource shrinker cannot see.
+      minifyEnabled true
+      shrinkResources false
+      // src/main/proguard-rules.pro is copied from App_Resources/Android/src/main by the CLI.
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'src/main/proguard-rules.pro'
+    }
+  }
+  aaptOptions {
+    additionalParameters "--no-version-vectors"
+  }
+}
