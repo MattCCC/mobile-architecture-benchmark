@@ -1,0 +1,12 @@
+# Generated workload (node candidates/_island-host/tools/prepare-assets.mjs)
+/generated/
+# Local non-distribution Android signing key (tools/make-keystore.sh)
+/android/.keys/
+*.jks
+*.keystore
+keystore.properties
+# Swift package build state
+/ios/Core/.build/
+/ios/Core/.swiftpm/
+xcuserdata/
+.DS_Store

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Platform light theme, no AppCompat; the Android 12+ system splash screen is the only launch screen. -->
+    <style name="Theme.MobileBench" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

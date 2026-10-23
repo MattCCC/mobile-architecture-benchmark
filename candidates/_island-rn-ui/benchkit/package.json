@@ -1,0 +1,37 @@
+{
+  "name": "@mobilebench/rn-benchkit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Island variant of the React Native benchmark instrumentation: the same TurboModule and draw-probe API as candidates/_rn-shared/rn-benchkit, forwarding every marker and probe to the island host's marker core",
+  "license": "Apache-2.0",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "source": "src/index.ts",
+  "files": [
+    "src",
+    "android",
+    "ios",
+    "MobileBenchIslandBench.podspec"
+  ],
+  "codegenConfig": {
+    "name": "MobileBenchIslandBenchSpec",
+    "type": "all",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "org.example.mobilebench.islandbench"
+    },
+    "ios": {
+      "modulesProvider": {
+        "MobileBenchKit": "MBIslandBench"
+      },
+      "componentProvider": {
+        "MobileBenchProbe": "MBIslandProbeComponentView"
+      },
+      "components": {
+        "MobileBenchProbe": {
+          "className": "MBIslandProbeComponentView"
+        }
+      }
+    }
+  }
+}

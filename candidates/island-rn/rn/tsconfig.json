@@ -1,0 +1,29 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [],
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@mobilebench/rn-ui/*": ["../../_rn-shared/ui/src/*"],
+      "@mobilebench/island-ui/*": ["../../_island-rn-ui/src/*"],
+      "@mobilebench/rn-benchkit": ["../../_island-rn-ui/benchkit/src"],
+      "react-native": ["./node_modules/react-native/types_generated/index.d.ts"],
+      "*": ["./node_modules/@types/*", "./node_modules/*"]
+    }
+  },
+  "include": [
+    "*.ts",
+    "*.tsx",
+    "../../_island-rn-ui/src/**/*.ts",
+    "../../_island-rn-ui/src/**/*.tsx",
+    "../../_island-rn-ui/benchkit/src/**/*.ts",
+    "../../_rn-shared/ui/src/domain/**/*.ts",
+    "../../_rn-shared/ui/src/bench/**/*.ts",
+    "../../_rn-shared/ui/src/bench/**/*.tsx",
+    "../../_rn-shared/ui/src/components/theme.ts",
+    "../../_rn-shared/ui/src/screens/InsightsView.tsx",
+    "../../_rn-shared/ui/src/screens/ErrorScreen.tsx"
+  ],
+  "exclude": ["**/node_modules", "**/Pods", "android", "ios", "build"]
+}

@@ -121,8 +121,14 @@ Environment manifests record the device configuration (AVD hardware profile, ima
 memory, reported refresh rate, or simulator device type and runtime build), host hardware class, OS, load average,
 power source and `pmset -g therm` at session start and end. A gap of more than 5 s between the wall clock and the
 uptime clock (host sleep) fails the session. `--watchdog-min` stops starting journeys and finalizes the files; the
-caller enforces the hard stop (SIGTERM, then SIGKILL). A killed session keeps `status: running` and is excluded by
-`combine.mjs`.
+caller enforces the hard stop (SIGTERM, then SIGKILL). SIGHUP is logged and ignored, so a detached session
+survives the end of the terminal that started it. A killed session keeps `status: running` and is excluded by
+`combine.mjs` until `finalize.mjs` rebuilds it (Android): every value is re-parsed from `raw/` with the live
+parsers and classification rules; the journey in progress becomes `not-measured` / `interrupted`, journeys never
+started `not-measured` / `not-attempted`, and facts only the killed process knew are recorded as not recorded
+(limitations `environment-reconstructed-post-hoc`, `process-liveness-not-recorded`). The runner writes the
+environment into the manifest as soon as the device is ready and appends one line per launch to `journal.jsonl`
+(liveness, pid, FUI wait), which `finalize.mjs` uses when present.
 
 Build provenance:
 
@@ -144,6 +150,7 @@ Build provenance:
 node tools/early-bench/session.mjs --platform android --repo . --out <sessions> --artifacts <frozen> \
   --candidates native,flutter --run-id <id> --design-sha256 <sha256 of the design document> [--plan-only]
 node tools/early-bench/combine.mjs --in <sessions> --out <summary.md> [--invalid-from <json>]
+node tools/early-bench/finalize.mjs --session <sessions>/<id> --repo . --abort-reason <cause> [--ended-at <ISO>]
 node tools/early-bench/dry-run.mjs --package <pkg> --am <file> --logcat <file> --meminfo <file>
 node --test tools/early-bench/test/
 ```

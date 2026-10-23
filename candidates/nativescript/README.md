@@ -158,6 +158,21 @@ pilot. Marker timestamps are draw-time timestamps from the probes' draw callback
   and may auto-install SDK build-tools requested by the runtime (35.0.1 here); do this outside measurement windows.
 - Accessibility identifiers on Android are exposed through NativeScript's accessibility delegate, installed one
   microtask after a view loads; acceptance waits must tolerate that.
+- Framework behaviours this candidate works around (found on the emulator / simulator):
+  - iOS `ListView.rowHeight` is coerced to `auto` while the native view does not exist and is not re-applied on
+    iOS, so the list re-applies it on `loaded` (`updateEffectiveRowHeight`); without it rows are auto-sized.
+  - `ListView` is a container view that extends beyond the iOS safe area by default; the list and the List
+    screen root set `iosOverflowSafeArea = false` so nothing is drawn under the home indicator.
+  - The `@nativescript/core` widgets AAR declares `allowBackup="true"`; the manifest overrides it with
+    `tools:replace`.
+  - A `@NativeClass` subclass of an Android class needs `return globalThis.__native(this)` in its constructor, and
+    `Canvas.drawColor(int)` with an ARGB value above 2^31 resolves to the `long` overload (colour-space form) and
+    throws; the probe uses `drawRGB`.
+  - NativeScript's `Application` background event did not fire on Android in this setup; background /
+    foreground come from the candidate's own `ActivityLifecycleCallbacks` (Android) and the application
+    notifications (iOS), which is also what the design asks for.
+- Gradle (the NativeScript plugin build) reads stdin: run builds with stdin from `/dev/null` in background jobs,
+  otherwise the job is stopped by `SIGTTIN`.
 - The bundled replay streams (about 0.46 MB per profile, uncompressed) are part of the artifact; size reports must
   subtract the `benchmark-data` category.
 
@@ -186,5 +201,17 @@ Verification of this authoring step (2026-10-22, macOS on Apple silicon, Node 24
 | `npx --no-install eslint .` | exit 0 |
 | `npm test` | 33 tests, 33 passed |
 | `make -n -f candidates/nativescript/candidate.mk …` (repository root) | all targets resolve |
+| `make check-nativescript` (repository root, after the device checks) | exit 0; type-check and lint clean, 33/33 tests |
 
-App builds and device checks are recorded below as they are run.
+Release builds and functional smoke checks on virtual devices (2026-10-22, Android emulator / iOS simulator on an
+Apple silicon host: not representative of physical devices). These are pre-harness smoke checks driven by a
+script (adb + `uiautomator dump` on Android, `simctl` on iOS), not the shared acceptance suite, which does not
+exist yet. No performance measurements were taken.
+
+| Platform | Build | Device | Checks | Outcome |
+|---|---|---|---|---|
+| Android | `make build-nativescript-android`: exit 0; the APK contains native libraries for `lib/arm64-v8a/` only | AVD from `system-images;android-37.0;google_apis;arm64-v8a`, 1080 × 2400, 420 dpi, cold boot without snapshot | FUI marker `rows=10;h=730;sel=50;seq=0`; every List-screen accessibility id present; tap on `mb.row.1.opt.a` → selected state, `resp`, summary 51; Selection, Detail and Insights screens reached (`screen` markers); Detail panel show/hide (`anim.start`/`anim.end` pairs); HOME → `bg`, foreground → `fg`, `resume`; HOME on Detail, `am force-stop`, relaunch with `mb.restore=1` → `restore r=detail/3`; every checkpoint digest at seq 200 equals the reference model (initial selection, then with the tap applied); no crash-buffer entries | 23/23 passed |
+| iOS | `make build-nativescript-ios`: exit 0; simulator Release, minimum OS 16.4 | iPhone 17 simulator, iOS 27.0 runtime, Xcode 27.1 | FUI marker `rows=8;h=642;sel=50;seq=0` (list inside the safe area); stream live after FUI; background (`bg`, checkpoint) and foreground (`fg`, `resume`, reconnect from `lastSeq + 1`); terminate + relaunch with `mb.restore=1` into the List and into a Detail route (`restore`); every checkpoint digest equals the reference model at its seq, also after both restores; no error markers. No taps (no UI driver in this check) | 12/12 passed |
+
+Both rows are the results after the fixes listed under Known issues; earlier attempts failed and were not kept as
+results. The iOS simulator binary is the default fat simulator build (x86_64 + arm64).

@@ -95,6 +95,10 @@ Android: native Views in the activity window, so FrameTimeline (A-F1) and layer 
 
 - Status of builds and checks: see the section below; anything not listed was not run.
 - Pilot: superseded by early-bench sessions (decision 29).
+- Re.Pack 5.4.2 `HermesBytecodePlugin` + `CodeSigningPlugin` ship unsigned bytecode (see Architecture); this project
+  uses `rspack.hermes.mjs` instead. Re-check when Re.Pack is upgraded.
+- iOS checks are tap-free (no XCUITest driver in this directory yet): taps are verified on Android only; on iOS the
+  Insights and Detail screens are reached through restoration.
 
 ## Toolchain needs
 
@@ -103,4 +107,25 @@ with an iOS simulator runtime ≥ 16.4, CocoaPods 1.17.
 
 ## Status (verification actually run)
 
-To be completed with the commands and outcomes of this branch (see below).
+2026-10-22, Apple silicon host (Xcode 27.1, JDK 17, Android SDK 37), every build and device run under the shared
+build/device lock. Devices: AVD `mobilebench_api37` (Android 37, google_apis arm64-v8a) and simulator
+`mobilebench-iphone` (iPhone 17, iOS 27.0). The root Makefile does not exist yet, so the `make` targets ran through a
+temporary makefile that only includes the candidate files. Functional checks only: no timing loop, no pilot (pilot:
+superseded by early-bench sessions, decision 29), no measurement (decisions 27, 34). The smoke drivers and the
+test-only module server (loopback, `current/manifest.json` indirection, versioned module routes, optional byte
+flip in `*.bundle` responses) are private PoC-workflow scripts, not part of this repository.
+
+| Check | Command | Outcome |
+|---|---|---|
+| Static checks | `make check-repack` | pass (after the last source change): 19 unit tests, lockfile check (1016 registry.npmjs.org entries + 1 local link, exact pins), `tsc`, ESLint (app + shared) |
+| Android release build | `make build-repack-android` | attempt 1 failed in `:app:createBundleReleaseJsAndAssets` (`RepackNativeEntryPlugin`: no `@react-native/js-polyfills` on RN 0.88; added 0.88.0); attempt 4 lost its Gradle daemon to an external kill 13 s in; final build: pass (Gradle 1 m 12 s), `build/android/app-arm64-release.apk` 20 096 129 B (sha256 `318896cebe5c59e8…`), arm64-v8a only, Hermes bytecode bundle, R8, V2-signed with the local non-distribution key, compileSdk 37 / targetSdk 36 |
+| Remote module, Android | `make remote-repack-android` and `make remote-repack-android MB_REPACK_VERSION=2` | pass: `build/remote/android/1/` and `/2/`; `verify-remote`: 26 chunks are Hermes bytecode, signed, and verify with the host key (before the bytecode fix, every chunk lacked a signature and every remote load fell back) |
+| Android functional smoke | private driver on `mobilebench_api37` | **44/44** (embedded Insights) — `fui rows=10;h=730;sel=50;seq=0`; digests at seq 100 and 150 equal the reference model and `fixtures/v1/golden.json`; counters `dup=0;gap=0`; row values, summary, status, digest element; toggle (`resp`, selected state, summary); Selection and back; Detail values and the animated panel; Insights source text and top entry; background checkpoint, `resume`; force-stop + `mb.restore=1` → `restore r=detail/3`, first message seq 101, restored values and selection; no crash |
+| Android remote smoke | private driver + test-only module server | **20/20** — v1 from the network (`remote.source src=network`, `remote.ready v=1`, `Source: network`, remote view shows the reference top entry; indirection, v1 manifest, container and exposed chunk requested); relaunch → `src=cache`, container not requested again; v2 activated → `src=network`, `remote.ready v=2`, v2 container requested; relaunch → v2 from cache; tampered v2 with `mb.clearModuleCache=1` → rejected by the strict signature check: `remote.error code=remote-checksum`, `Source: embedded-fallback`; no crash. Earlier attempts: 9/15 (unsigned bytecode), 14/15 (rejection reported as `remote-load`) |
+| iOS simulator build | `make build-repack-ios` | pass: `build/ios/MBRnRepack.app` (25 228 KiB), arm64 simulator, Release, Hermes bytecode `main.jsbundle`, MinimumOSVersion 16.4, unsigned; the Objective-C++ BenchKit wrapper compiles |
+| Remote module, iOS | `make remote-repack-ios` and `make remote-repack-ios MB_REPACK_VERSION=2` | pass: `build/remote/ios/1/` and `/2/`, 26 chunks each verified as above |
+| iOS functional smoke | private driver on `mobilebench-iphone` | **29/29** — `fui rows=8;h=642;sel=50;seq=0`; `proc.anchor`; stream live; digest at seq 100 equals the reference; `mem` marker; marker buffer flushed to `Library/Caches/mobilebench`; background checkpoint, `fg` + `resume`; terminate + `mb.restore=1` → first message seq 101, digest at seq 150 equals the reference; restored Insights (embedded) and Detail(3); remote phase as on Android: v1 network, v1 cache, v2 network, v2 cache, tampered v2 → `remote.error code=remote-checksum` + `embedded-fallback`. An earlier attempt overlapped a foreign simulator job (decision 31) and was repeated |
+
+Not run: taps on iOS (covered by the Android run of the same shared UI), the core acceptance suite and drivers
+(not implemented yet), the WebSocket source and the module routes of the real local server (not implemented yet),
+the iOS `URLCache.shared` clear, any measurement.

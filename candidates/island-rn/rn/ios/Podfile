@@ -1,0 +1,47 @@
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+# Deployment target 16.4 for every target and pod (design §13.2).
+platform :ios, '16.4'
+prepare_react_native_project!
+
+# Brownfield packaging needs static linking (the `brownfield package:ios` command sets USE_FRAMEWORKS itself).
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+else
+  use_frameworks! :linkage => :static
+end
+
+target 'MBIslandRn' do
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+    )
+    installer.pods_project.targets.each do |t|
+      t.build_configurations.each do |c|
+        c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.4'
+      end
+    end
+  end
+
+  # Brownfield framework target, packaged as an XCFramework for the island host app.
+  target 'MBIslands' do
+    inherit! :complete
+  end
+end

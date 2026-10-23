@@ -1,0 +1,33 @@
+// Android library of the island BenchKit forwarder (TurboModule + Fabric probe), autolinked into the island AARs.
+// Codegen runs through the React Native Gradle plugin from ../package.json `codegenConfig`.
+ext.MobileBenchIslandBench = [
+  minSdkVersion: 24,
+  compileSdkVersion: 37
+]
+
+ext.getMobileBenchIslandExtOrDefault = { prop ->
+  if (rootProject.ext.has(prop)) {
+    return rootProject.ext.get(prop)
+  }
+  return MobileBenchIslandBench[prop]
+}
+
+apply plugin: "com.android.library"
+if (project.extensions.findByName("kotlin") == null) {
+  apply plugin: "kotlin-android"
+}
+apply plugin: "com.facebook.react"
+
+android {
+  namespace "org.example.mobilebench.islandbench"
+  compileSdkVersion getMobileBenchIslandExtOrDefault("compileSdkVersion")
+
+  defaultConfig {
+    minSdkVersion getMobileBenchIslandExtOrDefault("minSdkVersion")
+    consumerProguardFiles "consumer-rules.pro"
+  }
+}
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+}

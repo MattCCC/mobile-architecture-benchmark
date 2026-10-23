@@ -82,6 +82,10 @@ Android: native Views in the activity window, so FrameTimeline (A-F1) and layer 
 
 - Status of builds and checks: see the section below; anything not listed was not run.
 - Pilot: superseded by early-bench sessions (decision 29).
+- iOS checks are tap-free (no XCUITest driver in this directory yet): toggles, navigation taps and the panel
+  animation are verified on Android only; on iOS the other screens are reached through restoration.
+- `xcrun simctl openurl mobilebenchexpo://…` stops at a system confirmation ("Open in “MB Expo”?") on the simulator,
+  so deep links are not usable for unattended checks.
 
 ## Toolchain needs
 
@@ -103,4 +107,8 @@ they are not part of this repository.
 | Android release build | `make build-expo-android` | pass (Gradle 4 m 47 s): `build/android/app-arm64-release.apk`, 29 093 688 B (sha256 `382a2966ff4a5c4c…`), arm64-v8a only, Hermes bytecode bundle, R8, V2-signed with the local non-distribution key, compileSdk 37 / targetSdk 36 / minSdk 24 |
 | Android functional smoke | private driver on `mobilebench_api37` | attempt 1: 43/44, `mb.insights.top` had no child entries in the accessibility tree (fixed in `../_rn-shared`, `collapsable={false}`); attempt 2 (rebuilt APK above): **44/44** — `fui rows=10;h=730;sel=50;seq=0`; checkpoint digests at seq 100 and 150 equal the reference model and `fixtures/v1/golden.json`; counters `r=100;a=100;dup=0;gap=0`; row values, summary, status `Ended`, digest element; option toggle (`resp`, selected state, summary); Selection and back; Detail values and the animated panel (`anim.start`/`anim.end`, present/absent); Insights embedded (`remote.source src=embedded`, `remote.ready v=1`, source text, top entry); background checkpoint, foreground `resume`; force-stop + `mb.restore=1` → `restore r=detail/3`, first message seq 101, restored values and selection; no crash |
 | iOS simulator build | `make build-expo-ios` | pass: `build/ios/MBExpo.app` (39 780 KiB, 177 files), arm64 simulator, Release, Hermes bytecode `main.jsbundle`, MinimumOSVersion 16.4, unsigned |
-| iOS functional smoke | private driver on `mobilebench-iphone` | attempt 1 invalid (a foreign job used the same simulator in that window, decision 31; it also showed that iOS 27 asks for confirmation before `simctl openurl` opens a custom scheme, so routes are now reached through restoration); attempt 2: see below |
+| iOS functional smoke | private driver on `mobilebench-iphone` | attempt 1 invalid (a foreign job used the same simulator in that window, decision 31; it also showed that iOS 27 asks for confirmation before `simctl openurl` opens a custom scheme, so routes are now reached through restoration); attempt 2 (same app): **15/15** — `fui rows=8;h=642;sel=50;seq=0`; `proc.anchor`; stream live; checkpoint digest at seq 100 equals the reference; `mem` marker (phys_footprint); marker buffer flushed to `Library/Caches/mobilebench`; background checkpoint, `fg` + `resume`; terminate + `mb.restore=1` → first message seq 101, digest at seq 150 equals the reference; restored Insights (`src=embedded`, `remote.ready v=1`); restored Detail(3) |
+
+Not run: taps on iOS (toggle, navigation, panel animation are covered by the Android run of the same shared UI),
+the core acceptance suite and drivers (not implemented yet), the WebSocket source against the local server (not
+implemented yet), any measurement (decisions 27, 34).

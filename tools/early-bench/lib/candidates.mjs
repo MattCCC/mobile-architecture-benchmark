@@ -133,8 +133,12 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
   if (!bundleId) {
     return { ...base, ok: false, status: 'not-measured', reason: 'bundle-id-missing' };
   }
-  // iOS simulator build class: declared per candidate (simulator builds carry no reliable marker of their own).
-  const declared = typeof p.buildClass === 'string' ? p.buildClass : (p.buildClass?.simulator ?? null);
+  // iOS simulator build class: declared per candidate, else the Xcode products directory of the artifact path
+  // (`Build/Products/<Configuration>-iphonesimulator/`); the bundle itself carries no reliable marker.
+  const explicit = typeof p.buildClass === 'string' ? p.buildClass : (p.buildClass?.simulator ?? null);
+  const fromPath = /(?:^|\/)Release-iphonesimulator\//.test(String(app ?? '')) ? 'release' : (/(?:^|\/)Debug-iphonesimulator\//.test(String(app ?? '')) ? 'debug' : null);
+  const declared = explicit ?? fromPath;
+  const buildClassSource = explicit ? 'candidate.json buildClass' : (fromPath ? 'artifact path (Xcode <Configuration>-iphonesimulator products directory)' : null);
   if (!declared) {
     return { ...base, ok: false, status: 'not-measured', reason: 'build-class-undeclared', bundleId };
   }
@@ -151,7 +155,7 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
   if (!app || !existsSync(join(repo, dir, app))) {
     return { ...base, ok: false, status: 'not-measured', reason: 'artifact-missing', bundleId };
   }
-  return { ...base, ok: true, bundleId, artifacts: [{ kind: 'app', rel: app }], declaredBuildClass: declared };
+  return { ...base, ok: true, bundleId, artifacts: [{ kind: 'app', rel: app }], declaredBuildClass: declared, buildClassSource };
 }
 
 export function hashArtifact(absPath) {

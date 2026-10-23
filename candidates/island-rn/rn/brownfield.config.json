@@ -1,0 +1,11 @@
+{
+  "$schema": "https://oss.callstack.com/react-native-brownfield/schema.json",
+  "ios": {
+    "scheme": "MBIslands",
+    "configuration": "Release"
+  },
+  "android": {
+    "moduleName": "islands",
+    "variant": "Release"
+  }
+}

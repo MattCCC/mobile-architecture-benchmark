@@ -1,0 +1,24 @@
+buildscript {
+    ext {
+        buildToolsVersion = "37.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 37
+        targetSdkVersion = 36
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.2.0"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        // Brownfield AAR packaging. 2.0.0-alpha11 is the version the scaffold of @callstack/react-native-brownfield
+        // 6.0.1 (latest stable npm release) writes; Maven Central has no stable 2.x release (see README, deviations).
+        classpath("com.callstack.react:brownfield-gradle-plugin:2.0.0-alpha11")
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"

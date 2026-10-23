@@ -97,6 +97,13 @@ test('iOS: flutter release is unavailable on the simulator, flutter@debug is the
     assert.equal(resolveCandidate({ repo, id: 'flutter@debug', platform: 'android' }).reason, 'variant-not-supported-on-platform');
     const ov = resolveCandidate({ repo, id: 'native', platform: 'ios', overrides: { native: { ios: { buildClass: 'release' } } } });
     assert.equal(ov.reason, 'artifact-missing');
+    // undeclared build class: taken from the Xcode products directory in the artifact path
+    mkdirSync(join(repo, 'candidates', 'native', 'b', 'Release-iphonesimulator', 'N.app'), { recursive: true });
+    writeFileSync(join(repo, 'candidates', 'native', 'candidate.json'), JSON.stringify({ id: 'native', platforms: { ios: {
+      bundleId: 'org.example.mobilebench.nativeapp', artifacts: { app: 'b/Release-iphonesimulator/N.app' } } } }));
+    const inferred = resolveCandidate({ repo, id: 'native', platform: 'ios' });
+    assert.deepEqual([inferred.ok, inferred.declaredBuildClass], [true, 'release']);
+    assert.match(inferred.buildClassSource, /artifact path/);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }

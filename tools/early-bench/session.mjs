@@ -6,7 +6,7 @@
 // installs frozen copies of artifacts that were built and verified elsewhere.
 import { parseArgs } from 'node:util';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
 import { homedir, hostname } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -339,6 +339,20 @@ async function main() {
   };
   process.on('SIGTERM', onSignal);
   process.on('SIGINT', onSignal);
+  // A detached session must survive the end of the terminal that started it (Node resets inherited signal
+  // dispositions, so `nohup` alone does not protect it). The caller's SIGTERM / SIGKILL stays the hard stop.
+  process.on('SIGHUP', () => log.warn('signal.ignored', { sig: 'SIGHUP' }));
+  ctx.checkpoint = (patch) => {
+    Object.assign(manifest, patch);
+    writeJson(manifestPath, manifest);
+  };
+  // Journal: one line per finished launch with the in-memory facts the raw files do not show (liveness, pid,
+  // fui wait), so a killed session can be finalized post hoc by finalize.mjs.
+  ctx.journal = (j) => appendFileSync(join(sdir, 'journal.jsonl'), SCRUB(`${JSON.stringify({
+    journeyId: j.journeyId, role: j.role, candidateId: j.candidateId, alive: j.alive ?? null, pid: j.pid ?? null,
+    fuiSeenByStream: j.fuiSeenByStream ?? j.fuiControl ?? null, startedAt: j.startedAt ?? null, endedAt: j.endedAt ?? null,
+    previousCandidateId: j.previousCandidateId ?? null,
+  })}\n`));
   const progress = (extra) => writeJson(join(sdir, 'progress.json'), { sessionId, at: isoNow(), elapsedS: Math.round((Date.now() - t0) / 1000), abort: ctx.abort, ...extra });
 
   const hostStart = await hostSnapshot();
@@ -626,6 +640,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     otherDevices: { start: otherDevicesStart, end: null },
   };
   log.info('device.ready', { deviceKey, bootedBySession, gpuMode });
+  ctx.checkpoint?.({ environment: env });
   const mbStream = android.startLogcatStream({ adbPath, serial, rawFile: join(rawDir, 'logcat-mobilebench-stream.txt'), scrub: (s) => redactor.scrub(s) });
 
   // ---- per-candidate setup: R-INSTALL, build class, R-ART, size ----
@@ -797,6 +812,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
       process: j.alive ? 'alive' : 'not-running',
     };
     lastCand = j.candidateId;
+    ctx.journal?.(j);
   };
 
   // ---- scenario groups ----
@@ -1186,6 +1202,7 @@ async function runIos(ctx, { selected, builds, schedule, sid4, hostStart, progre
       start: { capturedAt: isoNow(), state: 'Booted' }, end: null },
     otherDevices: { start: otherStart, end: null },
   };
+  ctx.checkpoint?.({ environment: env });
   const stream = ios.startLogStream(udid, join(rawDir, 'oslog-stream.ndjson'), (s) => redactor.scrub(s));
   await sleep(2500);
 
@@ -1226,7 +1243,7 @@ async function runIos(ctx, { selected, builds, schedule, sid4, hostStart, progre
     C[c.id] = { c, buildClass, dataPath: ins.dataPath, f };
     const build = buildRef(c, builds, buildClass);
     candidateRecords.push({
-      id: c.id, status: 'included', bundleId: c.bundleId, variant: c.variant, buildClass, buildClassSource: 'candidate.json (simulator)',
+      id: c.id, status: 'included', bundleId: c.bundleId, variant: c.variant, buildClass, buildClassSource: c.buildClassSource,
       family: c.family, architectureClass: c.architectureClass, buildId: builds[c.id].buildId,
       artifacts: builds[c.id].frozen.map(({ absFrozen, ...rest }) => rest), buildInputs: c.buildInputs,
       provenance: builds[c.id].prov, versions: c.versions, candidateJson: c.candidateJson, overridesApplied: c.overridesApplied,
@@ -1316,6 +1333,7 @@ async function runIos(ctx, { selected, builds, schedule, sid4, hostStart, progre
       process: j.alive ? 'alive' : 'not-running',
     };
     lastCand = j.candidateId;
+    ctx.journal?.(j);
   };
 
   const dataFailed = {};

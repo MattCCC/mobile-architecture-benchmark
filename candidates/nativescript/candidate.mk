@@ -5,7 +5,8 @@
 
 MB_CANDIDATES += nativescript
 
-MB_NATIVESCRIPT_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
+# Absolute, so recipes never act on relative paths (abspath and lastword exist since GNU Make 3.81).
+MB_NATIVESCRIPT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Toolchain environment (decision 15 paths as overridable defaults; nothing is installed by these targets).
 MB_NATIVESCRIPT_JDK17_DEFAULT := /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
@@ -76,11 +77,13 @@ build-nativescript-ios: prepare-nativescript
 	export GEM_PATH="$(MB_NATIVESCRIPT_GEM_PATH)" && \
 	npx --no-install ns build ios --release && \
 	app=$$(ls -d platforms/ios/build/Release-iphonesimulator/*.app | head -1) && \
-	test -n "$$app" && rm -rf build/ios/MBNativeScript.app && mkdir -p build/ios && \
-	cp -R "$$app" build/ios/MBNativeScript.app && du -sk build/ios/MBNativeScript.app
+	test -n "$$app" && rm -rf "$(MB_NATIVESCRIPT_IOS_APP)" && mkdir -p "$(MB_NATIVESCRIPT_DIR)/build/ios" && \
+	cp -R "$$app" "$(MB_NATIVESCRIPT_IOS_APP)" && du -sk "$(MB_NATIVESCRIPT_IOS_APP)"
 
 clean-nativescript:
-	cd "$(MB_NATIVESCRIPT_DIR)" && rm -rf platforms build app/generated App_Resources/Android/src/main/assets/mobilebench
+	test -f "$(MB_NATIVESCRIPT_DIR)/candidate.json" && cd "$(MB_NATIVESCRIPT_DIR)" && \
+	rm -rf "$(MB_NATIVESCRIPT_DIR)/platforms" "$(MB_NATIVESCRIPT_DIR)/build" "$(MB_NATIVESCRIPT_DIR)/app/generated" \
+		"$(MB_NATIVESCRIPT_DIR)/App_Resources/Android/src/main/assets/mobilebench"
 
 artifacts-nativescript-android:
 	@if [ -f "$(MB_NATIVESCRIPT_APK)" ]; then echo "$(MB_NATIVESCRIPT_APK)"; else echo "not-verified: not-built ($(MB_NATIVESCRIPT_APK))" >&2; exit 1; fi

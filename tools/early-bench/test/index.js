@@ -4,3 +4,4 @@ import './parse.test.mjs';
 import './records-hash.test.mjs';
 import './combine.test.mjs';
 import './session-plan.test.mjs';
+import './finalize.test.mjs';
