@@ -48,6 +48,7 @@
       "navigation": "expo-router Stack (react-native-screens native stack)",
       "animation": "Animated (useNativeDriver)",
       "streamClient": "in-app replay of the bundled stream (default); React Native WebSocket with mb.source=websocket",
+      "streamSource": "replay",
       "persistence": "@react-native-async-storage/async-storage",
       "artifacts": { "apk": "build/android/app-arm64-release.apk" },
       "sizeClassification": [
@@ -70,6 +71,7 @@
       "navigation": "expo-router Stack (react-native-screens native stack)",
       "animation": "Animated (useNativeDriver)",
       "streamClient": "in-app replay of the bundled stream (default); React Native WebSocket with mb.source=websocket",
+      "streamSource": "replay",
       "persistence": "@react-native-async-storage/async-storage",
       "artifacts": { "simulatorApp": "build/ios/MBExpo.app" }
     }

@@ -18,6 +18,7 @@
       "navigation": "@nativescript/core Frame (default transitions)",
       "animation": "View.animate (translateY + opacity, cubicBezier(0.42, 0, 0.58, 1), 300 ms)",
       "streamClient": "in-app replay of the bundled, golden-verified stream behind the transport interface (default); WebSocket transport not implemented yet",
+      "streamSource": "replay",
       "persistence": "file in the app files directory, temp file + rename",
       "artifacts": { "apk": "build/android/app-arm64-release.apk" },
       "sizeClassification": [
@@ -38,6 +39,7 @@
       "navigation": "@nativescript/core Frame (UINavigationController, default transitions)",
       "animation": "View.animate (translateY + opacity, cubicBezier(0.42, 0, 0.58, 1), 300 ms)",
       "streamClient": "in-app replay of the bundled, golden-verified stream behind the transport interface (default); WebSocket transport not implemented yet",
+      "streamSource": "replay",
       "persistence": "file in Application Support, atomic write",
       "buildClass": { "simulator": "release" },
       "artifacts": { "app": "build/ios/MBNativeScript.app" },

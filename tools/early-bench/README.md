@@ -11,6 +11,9 @@ Every output of this tool carries these labels (summary, every table, every mani
 - Android emulator / iOS simulator on an Apple silicon host: not representative of physical devices
 - not comparable with legacy or pilot numbers
 
+Each session selects one explicit stream source (`--stream-source replay|server`). Candidates must declare the same
+source in `candidate.json`; prose is never used to infer it, and mixed-source candidates are not measured together.
+
 ## What a session is
 
 One session = one device session on one platform (Android emulator AVD `mobilebench_api37`, or the iOS

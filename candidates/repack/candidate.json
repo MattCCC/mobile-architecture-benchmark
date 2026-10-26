@@ -54,6 +54,7 @@
       "navigation": "React Navigation native-stack (react-native-screens)",
       "animation": "Animated (useNativeDriver)",
       "streamClient": "in-app replay of the bundled stream (default); React Native WebSocket with mb.source=websocket",
+      "streamSource": "replay",
       "persistence": "@react-native-async-storage/async-storage",
       "artifacts": { "apk": "build/android/app-arm64-release.apk", "remote": "build/remote/android/<version>/" },
       "sizeClassification": [
@@ -77,6 +78,7 @@
       "navigation": "React Navigation native-stack (react-native-screens)",
       "animation": "Animated (useNativeDriver)",
       "streamClient": "in-app replay of the bundled stream (default); React Native WebSocket with mb.source=websocket",
+      "streamSource": "replay",
       "persistence": "@react-native-async-storage/async-storage",
       "artifacts": { "simulatorApp": "build/ios/MBRnRepack.app", "remote": "build/remote/ios/<version>/" }
     }

@@ -21,7 +21,8 @@ function fakeRepo() {
     mkdirSync(join(d, 'candidates', id, 'out'), { recursive: true });
     writeFileSync(join(d, 'candidates', id, 'out', 'app.apk'), `apk-${id}`);
     writeFileSync(join(d, 'candidates', id, 'candidate.json'), JSON.stringify({
-      id, family: id, platforms: { android: { applicationId: pkg, launchActivity: `${pkg}/.MainActivity`, artifacts: { apk: 'out/app.apk' } } },
+      id, family: id, platforms: { android: { applicationId: pkg, launchActivity: `${pkg}/.MainActivity`,
+        streamSource: 'replay', artifacts: { apk: 'out/app.apk' } } },
     }));
     const receiptDir = join(d, 'receipts', id);
     mkdirSync(receiptDir, { recursive: true });
@@ -90,7 +91,8 @@ test('CLI rejects bad input', () => {
   try {
     assert.equal(resolveCandidate({ repo, id: 'Bad_Id', platform: 'android' }).reason, 'invalid-candidate-id');
     assert.equal(resolveCandidate({ repo, id: 'native', platform: 'ios' }).reason, 'bundle-id-missing');
-    const ov = resolveCandidate({ repo, id: 'nomanifest', platform: 'android', overrides: { nomanifest: { android: { applicationId: 'org.example.x', artifacts: { apk: 'nope.apk' } } } } });
+    const ov = resolveCandidate({ repo, id: 'nomanifest', platform: 'android', overrides: { nomanifest: { android: {
+      applicationId: 'org.example.x', streamSource: 'replay', artifacts: { apk: 'nope.apk' } } } } });
     assert.equal(ov.reason, 'artifact-missing');
   } finally {
     rmSync(repo, { recursive: true, force: true });
@@ -103,9 +105,10 @@ test('iOS: flutter release is unavailable on the simulator, flutter@debug is the
     mkdirSync(join(repo, 'candidates', 'flutter', 'build', 'Runner.app'), { recursive: true });
     writeFileSync(join(repo, 'candidates', 'flutter', 'build', 'Runner.app', 'Info.plist'), 'x');
     writeFileSync(join(repo, 'candidates', 'flutter', 'candidate.json'), JSON.stringify({ id: 'flutter', family: 'flutter', platforms: { ios: {
-      bundleId: 'org.example.mobilebench.flutter', buildClass: { simulator: 'debug' }, artifacts: { simulatorApp: 'build/Runner.app' } } } }));
+      bundleId: 'org.example.mobilebench.flutter', streamSource: 'replay', buildClass: { simulator: 'debug' }, artifacts: { simulatorApp: 'build/Runner.app' } } } }));
     mkdirSync(join(repo, 'candidates', 'native'), { recursive: true });
-    writeFileSync(join(repo, 'candidates', 'native', 'candidate.json'), JSON.stringify({ id: 'native', platforms: { ios: { bundleId: 'org.example.mobilebench.nativeapp', artifacts: { app: 'x.app' } } } }));
+    writeFileSync(join(repo, 'candidates', 'native', 'candidate.json'), JSON.stringify({ id: 'native', platforms: { ios: {
+      bundleId: 'org.example.mobilebench.nativeapp', streamSource: 'replay', artifacts: { app: 'x.app' } } } }));
     const rel = resolveCandidate({ repo, id: 'flutter', platform: 'ios' });
     assert.deepEqual([rel.ok, rel.status, rel.reason], [false, 'unavailable', 'framework-no-release-on-simulator']);
     const dbg = resolveCandidate({ repo, id: 'flutter@debug', platform: 'ios' });
@@ -117,7 +120,7 @@ test('iOS: flutter release is unavailable on the simulator, flutter@debug is the
     // undeclared build class: taken from the Xcode products directory in the artifact path
     mkdirSync(join(repo, 'candidates', 'native', 'b', 'Release-iphonesimulator', 'N.app'), { recursive: true });
     writeFileSync(join(repo, 'candidates', 'native', 'candidate.json'), JSON.stringify({ id: 'native', platforms: { ios: {
-      bundleId: 'org.example.mobilebench.nativeapp', artifacts: { app: 'b/Release-iphonesimulator/N.app' } } } }));
+      bundleId: 'org.example.mobilebench.nativeapp', streamSource: 'replay', artifacts: { app: 'b/Release-iphonesimulator/N.app' } } } }));
     const inferred = resolveCandidate({ repo, id: 'native', platform: 'ios' });
     assert.deepEqual([inferred.ok, inferred.declaredBuildClass], [true, 'release']);
     assert.match(inferred.buildClassSource, /artifact path/);

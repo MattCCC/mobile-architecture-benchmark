@@ -39,6 +39,7 @@ options:
   --memory-journeys <n>    journeys per candidate for idle memory (default: --journeys)
   --idle-s <s>             idle time on List before the memory read (default 30)
   --profile <name>         fixture profile passed as mb.profile (default representative)
+  --stream-source <name>   required candidate stream source: replay or server (default replay)
   --seed <uint32>          schedule seed (default: random, recorded)
   --budget-min <m>         planned device time (default 30); a seeded candidate subset is used if needed
   --watchdog-min <m>       stop starting journeys and finalize after this many minutes (default 35); the caller
@@ -67,6 +68,7 @@ function cli(argv) {
       'design-ref': { type: 'string', default: '' }, 'verification-note': { type: 'string', default: '' },
       journeys: { type: 'string', default: '10' }, 'memory-journeys': { type: 'string' }, 'idle-s': { type: 'string', default: '30' },
       profile: { type: 'string', default: 'representative' },
+      'stream-source': { type: 'string', default: 'replay' },
       seed: { type: 'string' }, 'budget-min': { type: 'string', default: '30' }, 'watchdog-min': { type: 'string', default: '35' },
       anchor: { type: 'string', default: 'native' }, 'pooled-n': { type: 'string' }, overrides: { type: 'string' },
       'expect-artifact': { type: 'string', multiple: true, default: [] }, 'other-devices': { type: 'string', default: 'abort' },
@@ -121,6 +123,9 @@ function cli(argv) {
   if (!/^[a-z]+$/.test(values.profile)) {
     throw new Error('--profile must match [a-z]+');
   }
+  if (!['replay', 'server'].includes(values['stream-source'])) {
+    throw new Error('--stream-source must be replay or server');
+  }
   const journeys = int('journeys', 1, 100);
   values['memory-journeys'] ??= String(journeys);
   return {
@@ -137,6 +142,7 @@ function cli(argv) {
     memoryJourneys: int('memory-journeys', 0, 100),
     idleS: int('idle-s', 1, 600),
     profile: values.profile,
+    streamSource: values['stream-source'],
     seed: values.seed === undefined ? randomBytes(4).readUInt32BE(0) : int('seed', 0, 4294967295),
     budgetMin: int('budget-min', 1, 120),
     watchdogMin: int('watchdog-min', 1, 180),
@@ -273,6 +279,11 @@ async function main() {
       candidateRecords.push({ id: c.id, status: c.status ?? 'not-measured', reason: c.reason, ...(c.hint ? { hint: c.hint } : {}) });
       continue;
     }
+    if (c.streamSource !== o.streamSource) {
+      candidateRecords.push({ id: c.id, status: 'not-measured', reason: 'stream-source-mismatch',
+        detail: `candidate declares ${c.streamSource}; session requires ${o.streamSource}` });
+      continue;
+    }
     const src = join(o.repo, c.dir, c.artifacts[0].rel);
     const h = hashArtifact(src);
     const receiptPath = o.acceptance[`${c.id}:${o.platform}`] ?? null;
@@ -317,7 +328,7 @@ async function main() {
   });
   const plan = {
     platform: o.platform, candidates: selected.map((c) => c.id), groups, journeysPerCandidate: o.journeys,
-    memoryJourneysPerCandidate: o.memoryJourneys, idleS: o.idleS, profile: o.profile, seed: o.seed,
+    memoryJourneysPerCandidate: o.memoryJourneys, idleS: o.idleS, profile: o.profile, streamSource: o.streamSource, seed: o.seed,
     estimateS: est.overheadS + selected.length * est.perCandidateS, estimateModel: est, budgetS, watchdogS: o.watchdogMin * 60,
     incompleteBlockDesign,
     notMeasured: candidateRecords,

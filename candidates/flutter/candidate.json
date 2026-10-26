@@ -39,6 +39,7 @@
       "navigation": "Navigator 1.0 + MaterialPageRoute (platform default transition)",
       "animation": "AnimationController + CurvedAnimation(Curves.easeInOut) + SlideTransition/FadeTransition",
       "streamClient": "in-app replay of the bundled stream (default); a dart:io WebSocket source plugs into the same FrameSource interface (not implemented yet)",
+      "streamSource": "replay",
       "persistence": "dart:io file in Context.getFilesDir(), temp file + atomic rename",
       "buildClass": "release",
       "artifacts": {
@@ -64,6 +65,7 @@
       "navigation": "Navigator 1.0 + MaterialPageRoute (Cupertino-style default transition)",
       "animation": "AnimationController + CurvedAnimation(Curves.easeInOut) + SlideTransition/FadeTransition",
       "streamClient": "in-app replay of the bundled stream (default); dart:io WebSocket planned",
+      "streamSource": "replay",
       "persistence": "dart:io file in Library/Application Support, temp file + atomic rename",
       "buildClass": { "simulator": "debug", "device": "release" },
       "buildClassNote": "flutter_tools 3.47.7 builds only debug for simulators (release: 'RELEASE mode is not supported for simulators.')",

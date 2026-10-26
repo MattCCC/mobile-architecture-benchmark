@@ -78,9 +78,8 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
   const ov = overrides[id] ?? overrides[baseId] ?? {};
   const p = deepMerge(cj.platforms?.[platform] ?? {}, ov[platform] ?? {});
   const family = ov.family ?? cj.family ?? null;
-  // Stream source: declared, or derived from the candidate's own description of its stream client.
-  const streamText = String(p.streamClient ?? '');
-  const streamSource = p.streamSource ?? (/replay/i.test(streamText) ? 'replay' : (/websocket|server/i.test(streamText) ? 'server' : 'unknown'));
+  // Stream source is a comparison boundary and must be machine-readable. Never infer it from prose.
+  const streamSource = typeof p.streamSource === 'string' ? p.streamSource : 'unknown';
   const inputs = buildInputs(cj, dir);
   const base = {
     id,
@@ -95,7 +94,7 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
     overridesApplied: Boolean(ov[platform] || ov.family),
     limitations: familyLimitations(family, platform),
     streamSource,
-    streamSourceBasis: p.streamSource ? 'candidate.json streamSource' : (streamText ? 'candidate.json streamClient text' : 'not declared'),
+    streamSourceBasis: p.streamSource ? 'candidate.json streamSource' : 'not declared',
     buildInputs: inputs.dirs,
     sharedBuildInputs: inputs.shared,
     sharedBuildInputsBasis: inputs.basis,
@@ -111,6 +110,9 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
     const apk = p.artifacts?.apk ?? null;
     if (!pkg) {
       return { ...base, ok: false, status: 'not-measured', reason: 'application-id-missing' };
+    }
+    if (!['replay', 'server'].includes(streamSource)) {
+      return { ...base, ok: false, status: 'not-measured', reason: 'stream-source-undeclared-or-invalid' };
     }
     if (!apk || !existsSync(join(repo, dir, apk))) {
       return { ...base, ok: false, status: 'not-measured', reason: 'artifact-missing', packageName: pkg };
@@ -151,6 +153,9 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
   }
   if (variant === 'debug' && declared !== 'debug') {
     return { ...base, ok: false, status: 'not-measured', reason: `variant-build-class-mismatch:${declared}`, bundleId };
+  }
+  if (!['replay', 'server'].includes(streamSource)) {
+    return { ...base, ok: false, status: 'not-measured', reason: 'stream-source-undeclared-or-invalid', bundleId };
   }
   if (!app || !existsSync(join(repo, dir, app))) {
     return { ...base, ok: false, status: 'not-measured', reason: 'artifact-missing', bundleId };
