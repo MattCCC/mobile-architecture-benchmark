@@ -3,6 +3,7 @@
 // `restore` markers (§6.2).
 
 import {
+  AccessibilityRole,
   Button,
   CoreTypes,
   EventData,
@@ -225,6 +226,9 @@ export class ListScreen extends Screen {
     OPTION_KEYS_LOWER.forEach((k, o) => {
       const b = new Button();
       b.accessible = true;
+      // A toggle: core maps accessibilityState checked/unchecked to the native checked state only for checkbox,
+      // radio button and switch roles.
+      b.accessibilityRole = AccessibilityRole.Checkbox;
       b.bind({ sourceProperty: `${k}Text`, targetProperty: 'text' });
       b.bind({ sourceProperty: `${k}Class`, targetProperty: 'className' });
       b.bind({ sourceProperty: `${k}Id`, targetProperty: 'accessibilityIdentifier' });
