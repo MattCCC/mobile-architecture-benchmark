@@ -31,6 +31,8 @@ configuration and what has been verified on each platform.
   targets) and a README.
 - `tools/`: benchmark tooling. Node.js built-ins only, managed with npm.
 - `tools/acceptance/`: shared black-box check contract and verifier for artifact-bound acceptance receipts.
+- `tools/eligibility/`: fail-closed audit separating descriptive implementations from independently reviewed,
+  publishable comparison cells.
 - `design.md`: the normative workload, eligibility and reporting contract; every session records its content hash.
 
 ## Quick start
@@ -47,7 +49,8 @@ make check
 
 The initial implementations were ported from the maintainers' earlier prototypes. Optimisation expertise may differ
 between candidates. Framework experts are invited to review and improve any candidate through pull requests. Changes
-are judged by the same acceptance checks and measurement method.
+are judged by the same acceptance checks and measurement method. Candidate/platform cells remain ineligible for
+ranking until their manifest records accepted independent review and the eligibility audit passes.
 
 ## License
 

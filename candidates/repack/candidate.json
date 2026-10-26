@@ -7,6 +7,7 @@
   "family": "react-native",
   "architectureClass": "cross-platform-js-native-widgets",
   "owner": "rn-family",
+  "independentReview": { "status": "pending", "requiredExpertise": "Re.Pack and React Native production performance" },
   "status": { "android": "implemented", "ios": "implemented" },
   "versions": {
     "react-native": "0.88.0",

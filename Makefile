@@ -5,17 +5,19 @@
 SHELL := /bin/sh
 .DEFAULT_GOAL := help
 
-.PHONY: help check check-fixtures test-acceptance test-early-bench
+.PHONY: help check check-fixtures audit-eligibility test-acceptance test-eligibility test-early-bench
 
 help:
 	@echo "Targets:"
 	@echo "  check              fixture, acceptance and early-bench unit tests"
 	@echo "  check-fixtures     deterministic fixture generator self-test and checksums"
 	@echo "  test-acceptance    unit tests of the artifact-bound acceptance contract"
+	@echo "  audit-eligibility  report which candidate/platform cells are eligible for ranking"
+	@echo "  test-eligibility   unit tests of fail-closed eligibility rules"
 	@echo "  test-early-bench   unit tests of tools/early-bench"
 	@echo "  check-<id>, build-<id>-android, build-<id>-ios   per candidate, see candidates/<id>/README.md"
 
-check: check-fixtures test-acceptance test-early-bench
+check: check-fixtures test-acceptance test-eligibility test-early-bench
 
 check-fixtures:
 	node fixtures/generator/selftest.mjs
@@ -26,5 +28,11 @@ test-early-bench:
 
 test-acceptance:
 	node --test tools/acceptance/test/*.test.mjs
+
+audit-eligibility:
+	node tools/eligibility/audit.mjs --repo .
+
+test-eligibility:
+	node --test tools/eligibility/test/*.test.mjs
 
 -include $(wildcard candidates/*/candidate.mk)
