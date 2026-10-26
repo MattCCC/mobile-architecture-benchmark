@@ -27,6 +27,7 @@ import {
 } from './lib/parse.mjs';
 import * as android from './lib/android.mjs';
 import * as ios from './lib/ios.mjs';
+import { verifyAcceptanceReceipt } from '../acceptance/lib.mjs';
 
 export const TOOL_VERSION = '0.2.0';
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -46,6 +47,7 @@ options:
   --pooled-n <file>        JSON {candidate: pooled journeys so far} used to choose a subset
   --overrides <file>       JSON {candidate: {android|ios: {...candidate.json platform fields}}}
   --expect-artifact id:platform=<sha256 | prefix…suffix>   verified build hash (repeatable); mismatch -> not-measured
+  --acceptance-receipt id:platform=<path>  passing artifact-bound acceptance receipt (repeatable; required)
   --verification-note <t>  where the verified-candidate list came from
   --design <path>          normative design file (default: <repo>/design.md); its bytes are hashed by the runner
   --design-ref <t>         label of the design revision
@@ -68,6 +70,7 @@ function cli(argv) {
       seed: { type: 'string' }, 'budget-min': { type: 'string', default: '30' }, 'watchdog-min': { type: 'string', default: '35' },
       anchor: { type: 'string', default: 'native' }, 'pooled-n': { type: 'string' }, overrides: { type: 'string' },
       'expect-artifact': { type: 'string', multiple: true, default: [] }, 'other-devices': { type: 'string', default: 'abort' },
+      'acceptance-receipt': { type: 'string', multiple: true, default: [] },
       'other-devices-wait-s': { type: 'string', default: '120' },
       avd: { type: 'string', default: 'mobilebench_api37' }, 'sim-name': { type: 'string', default: 'mobilebench-iphone' },
       'sim-runtime': { type: 'string', default: 'com.apple.CoreSimulator.SimRuntime.iOS-27-0' },
@@ -102,6 +105,14 @@ function cli(argv) {
     }
     expect[`${m[1]}:${m[2]}`] = { ...parsed, text: m[3] };
   }
+  const acceptance = {};
+  for (const entry of values['acceptance-receipt']) {
+    const m = /^([a-z][a-z0-9-]*(?:@debug)?):(android|ios)=(.+)$/.exec(entry);
+    if (!m) {
+      throw new Error(`bad --acceptance-receipt ${entry}`);
+    }
+    acceptance[`${m[1]}:${m[2]}`] = resolve(m[3]);
+  }
   const repo = resolve(values.repo);
   const designPath = resolve(repo, values.design ?? 'design.md');
   if (!existsSync(designPath)) {
@@ -133,6 +144,7 @@ function cli(argv) {
     pooledN: values['pooled-n'] ? JSON.parse(readFileSync(values['pooled-n'], 'utf8')) : {},
     overrides: values.overrides ? JSON.parse(readFileSync(values.overrides, 'utf8')) : {},
     expect,
+    acceptance,
     otherDevices: values['other-devices'],
     otherDevicesWaitS: int('other-devices-wait-s', 0, 1800),
     avd: values.avd,
@@ -263,12 +275,26 @@ async function main() {
     }
     const src = join(o.repo, c.dir, c.artifacts[0].rel);
     const h = hashArtifact(src);
+    const receiptPath = o.acceptance[`${c.id}:${o.platform}`] ?? null;
+    if (!receiptPath) {
+      candidateRecords.push({ id: c.id, status: 'not-measured', reason: 'acceptance-receipt-missing' });
+      continue;
+    }
+    const acceptance = verifyAcceptanceReceipt(receiptPath, {
+      candidateId: c.baseId, platform: o.platform, artifactSha256: h.sha256, designSha256: o.designSha256,
+    });
+    if (!acceptance.ok) {
+      candidateRecords.push({ id: c.id, status: 'not-measured', reason: 'acceptance-receipt-invalid', detail: acceptance.problems.join('; ') });
+      continue;
+    }
     const expected = o.expect[`${c.id}:${o.platform}`] ?? null;
     if (expected && !matchesExpected(expected, h.sha256)) {
       candidateRecords.push({ id: c.id, status: 'not-measured', reason: 'artifact-not-verified', detail: `artifact ${h.sha256} != verified ${expected.text}` });
       continue;
     }
-    usable.push({ ...c, primarySha256: h.sha256, verified: expected ? { text: expected.text, form: expected.form, matched: true } : null });
+    usable.push({ ...c, primarySha256: h.sha256,
+      acceptance: { sha256: acceptance.sha256, suiteId: acceptance.receipt.suiteId },
+      verified: expected ? { text: expected.text, form: expected.form, matched: true } : null });
   }
   const est = estimate(o.platform, o);
   const budgetS = o.budgetMin * 60;
@@ -297,7 +323,8 @@ async function main() {
     notMeasured: candidateRecords,
   };
   if (o.planOnly) {
-    process.stdout.write(`${JSON.stringify({ plan, schedule, artifacts: usable.map((c) => ({ id: c.id, sha256: c.primarySha256, verified: c.verified })) }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ plan, schedule, artifacts: usable.map((c) => ({ id: c.id, sha256: c.primarySha256,
+      verified: c.verified, acceptance: c.acceptance })) }, null, 2)}\n`);
     return 0;
   }
   writeJson(join(sdir, 'schedule.json'), schedule);
@@ -311,7 +338,9 @@ async function main() {
     environmentClass: o.platform === 'android' ? 'emulator' : 'simulator',
     status: 'running', failureReason: null, startedAt, endedAt: null, lockAcquiredAt: o.lockAcquiredAt,
     design: { sha256: o.designSha256, ref: o.designRef },
-    verification: { note: o.verificationNote, candidatesRequested: o.candidates, expectedArtifacts: Object.fromEntries(Object.entries(o.expect).map(([k, v]) => [k, v.text])) },
+    verification: { note: o.verificationNote, candidatesRequested: o.candidates,
+      expectedArtifacts: Object.fromEntries(Object.entries(o.expect).map(([k, v]) => [k, v.text])),
+      acceptanceReceipts: Object.fromEntries(selected.map((c) => [c.id, c.acceptance])) },
     tool: { name: 'early-bench', version: TOOL_VERSION, source: toolSource() },
     source: ident.source,
     schedule: { file: 'schedule.json', sha256: sha256(readFileSync(join(sdir, 'schedule.json'))) },

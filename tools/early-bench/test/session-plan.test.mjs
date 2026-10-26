@@ -15,12 +15,24 @@ const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', 'session.mjs');
 
 function fakeRepo() {
   const d = mkdtempSync(join(tmpdir(), 'eb-repo-'));
-  writeFileSync(join(d, 'design.md'), 'test design\n');
+  const design = 'test design\n';
+  writeFileSync(join(d, 'design.md'), design);
   for (const [id, pkg] of [['native', 'org.example.mobilebench.nativeapp'], ['flutter', 'org.example.mobilebench.flutter'], ['expo', 'org.example.mobilebench.expo']]) {
     mkdirSync(join(d, 'candidates', id, 'out'), { recursive: true });
     writeFileSync(join(d, 'candidates', id, 'out', 'app.apk'), `apk-${id}`);
     writeFileSync(join(d, 'candidates', id, 'candidate.json'), JSON.stringify({
       id, family: id, platforms: { android: { applicationId: pkg, launchActivity: `${pkg}/.MainActivity`, artifacts: { apk: 'out/app.apk' } } },
+    }));
+    const receiptDir = join(d, 'receipts', id);
+    mkdirSync(receiptDir, { recursive: true });
+    const evidence = `accepted ${id}\n`;
+    writeFileSync(join(receiptDir, 'evidence.txt'), evidence);
+    writeFileSync(join(receiptDir, 'receipt.json'), JSON.stringify({
+      schema: 'mobilebench.acceptance-receipt/1.0.0', suiteId: 'mobilebench.acceptance/1', status: 'passed',
+      candidateId: id, platform: 'android', artifactSha256: sha256(`apk-${id}`), designSha256: sha256(design),
+      checks: ['initial-state', 'list-geometry', 'selection-semantics', 'navigation', 'live-update',
+        'background-foreground', 'restore', 'insights', 'error-behavior'].map((check) => ({ id: check, status: 'passed' })),
+      evidence: [{ path: 'evidence.txt', sha256: sha256(evidence) }],
     }));
   }
   mkdirSync(join(d, 'candidates', 'nomanifest'), { recursive: true });
@@ -28,8 +40,11 @@ function fakeRepo() {
 }
 
 function plan(repo, extra) {
+  const receipts = ['native', 'flutter', 'expo'].flatMap((id) => [
+    '--acceptance-receipt', `${id}:android=${join(repo, 'receipts', id, 'receipt.json')}`,
+  ]);
   const out = execFileSync(process.execPath, [CLI, '--platform', 'android', '--repo', repo, '--out', join(repo, 'o'), '--artifacts', join(repo, 'f'),
-    '--run-id', 'r1', '--seed', '7', '--plan-only', ...extra], { encoding: 'utf8' });
+    '--run-id', 'r1', '--seed', '7', '--plan-only', ...receipts, ...extra], { encoding: 'utf8' });
   return JSON.parse(out);
 }
 
@@ -46,6 +61,7 @@ test('plan-only: verified hash mismatch and missing manifest become not-measured
     const p = plan(repo, ['--candidates', 'flutter,native,expo,nomanifest', '--expect-artifact', `expo:android=${'0'.repeat(64)}`]);
     assert.deepEqual(p.plan.notMeasured.map((x) => [x.id, x.reason]).sort(), [['expo', 'artifact-not-verified'], ['nomanifest', 'candidate-manifest-missing']]);
     assert.deepEqual([...p.plan.candidates].sort(), ['flutter', 'native']);
+    assert.equal(p.artifacts.find((a) => a.id === 'native').acceptance.suiteId, 'mobilebench.acceptance/1');
     assert.equal(p.artifacts.find((a) => a.id === 'native').sha256, sha256('apk-native'));
     assert.equal(p.schedule.groups.length, 3);
     assert.equal(p.schedule.groups[0].method, 'randomized-latin-square');

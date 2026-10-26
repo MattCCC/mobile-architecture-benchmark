@@ -14,9 +14,10 @@ Every output of this tool carries these labels (summary, every table, every mani
 ## What a session is
 
 One session = one device session on one platform (Android emulator AVD `mobilebench_api37`, or the iOS
-simulator `mobilebench-iphone`, iPhone 17 on iOS 27.0). It covers the candidates passed with `--candidates` (the
-caller passes only candidates whose current build passed functional verification), in a seeded, blocked,
-randomized order: a randomized Latin square when the block count is a multiple of the candidate count, otherwise
+simulator `mobilebench-iphone`, iPhone 17 on iOS 27.0). It covers the candidates passed with `--candidates`. Every
+candidate must have a passing, artifact-bound receipt from the repository acceptance contract; missing, failed, stale
+or mismatched receipts are `not-measured`. Runs use a seeded, blocked, randomized order: a randomized Latin square
+when the block count is a multiple of the candidate count, otherwise
 one Fisher-Yates permutation per block. Each block runs every candidate once. Debug-build variants
 (`<id>@debug`, e.g. `flutter@debug` on the iOS simulator, where Flutter builds only debug) get their own blocks
 after the release blocks of each scenario group, so they never take a position in a release block. The schedule
@@ -148,7 +149,8 @@ Build provenance:
 
 ```
 node tools/early-bench/session.mjs --platform android --repo . --out <sessions> --artifacts <frozen> \
-  --candidates native,flutter --run-id <id> [--design design.md] [--plan-only]
+  --candidates native,flutter --run-id <id> [--design design.md] \
+  --acceptance-receipt native:android=<receipt.json> [--plan-only]
 node tools/early-bench/combine.mjs --in <sessions> --out <summary.md> [--invalid-from <json>]
 node tools/early-bench/finalize.mjs --session <sessions>/<id> --repo . --abort-reason <cause> [--ended-at <ISO>]
 node tools/early-bench/dry-run.mjs --package <pkg> --am <file> --logcat <file> --meminfo <file>

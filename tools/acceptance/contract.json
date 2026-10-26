@@ -1,0 +1,15 @@
+{
+  "schema": "mobilebench.acceptance-contract/1.0.0",
+  "suiteId": "mobilebench.acceptance/1",
+  "requiredChecks": [
+    "initial-state",
+    "list-geometry",
+    "selection-semantics",
+    "navigation",
+    "live-update",
+    "background-foreground",
+    "restore",
+    "insights",
+    "error-behavior"
+  ]
+}
