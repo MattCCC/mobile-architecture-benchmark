@@ -62,12 +62,50 @@ function log(check, step, data = {}) {
 
 /** UI Automator dump as a flat node list with descendant text; retried while the UI is not idle. */
 async function dump() {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const r = await sh('uiautomator dump /sdcard/mb-ui.xml >/dev/null 2>&1; cat /sdcard/mb-ui.xml', { timeoutMs: 30000 });
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    // The file is removed first, so a failed dump never returns the previous screen. MbDump reads the accessibility
+    // tree without waiting for an idle UI; `uiautomator dump` (which gives up on continuously updating screens) is
+    // the fallback when the helper is unavailable.
+    const cmd = dumper
+      ? `rm -f ${DUMP_FILE}; CLASSPATH=${DUMPER_JAR} app_process / MbDump ${DUMP_FILE} >/dev/null 2>&1; cat ${DUMP_FILE} 2>/dev/null`
+      : `rm -f ${DUMP_FILE}; uiautomator dump ${DUMP_FILE} >/dev/null 2>&1; cat ${DUMP_FILE} 2>/dev/null`;
+    const r = await sh(cmd, { timeoutMs: 30000 });
     if (r.stdout.includes('<hierarchy')) return parseHierarchy(r.stdout);
-    await sleep(300);
+    await sleep(200);
   }
-  throw new Error('uiautomator dump failed');
+  throw new Error('hierarchy dump failed');
+}
+
+const DUMP_FILE = '/data/local/tmp/mb-ui.xml';
+const DUMPER_JAR = '/data/local/tmp/mbdump.jar';
+let dumper = false;
+
+/** Compiles tools/acceptance/android-dump/MbDump.java (javac + d8 from the SDK) and pushes it to the device. */
+async function installDumper() {
+  const sdk = process.env.ANDROID_HOME ?? `${process.env.HOME}/Library/Android/sdk`;
+  const platforms = (await run('ls', [join(sdk, 'platforms')])).stdout.trim().split('\n').filter((p) => p.startsWith('android-')).sort();
+  const buildTools = (await run('ls', [join(sdk, 'build-tools')])).stdout.trim().split('\n').sort();
+  const androidJar = join(sdk, 'platforms', platforms.pop(), 'android.jar');
+  const work = join(repo, 'results/local/acceptance/.mbdump');
+  mkdirSync(join(work, 'classes'), { recursive: true });
+  const javac = await run('javac', ['-nowarn', '--release', '11', '-cp', androidJar, '-d', join(work, 'classes'),
+    join(repo, 'tools/acceptance/android-dump/MbDump.java')], { timeoutMs: 120000 });
+  const d8 = javac.code === 0 && await run(join(sdk, 'build-tools', buildTools.pop(), 'd8'), ['--min-api', '24', '--lib', androidJar,
+    '--output', join(work, 'mbdump.jar'), join(work, 'classes', 'MbDump.class')], { timeoutMs: 120000 });
+  const push = d8?.code === 0 && await adb(['push', join(work, 'mbdump.jar'), DUMPER_JAR]);
+  dumper = push?.code === 0;
+  log('setup', 'dumper', { installed: dumper, ...(dumper ? {} : { javac: javac.stderr.slice(0, 400), d8: d8?.stderr?.slice(0, 400) }) });
+}
+
+/** Returns to the List screen (a failed check may leave another screen on top). */
+async function ensureList() {
+  for (let i = 0; i < 4; i += 1) {
+    const ui = await dump();
+    if (ui.find('mb.screen.list')) return ui;
+    await back(ui);
+    await sleep(800);
+  }
+  throw new Error('cannot return to the List screen');
 }
 
 function parseHierarchy(xml) {
@@ -166,10 +204,19 @@ async function back(ui) {
   else await sh('input keyevent KEYCODE_BACK');
 }
 
+const SCREEN_ROOT = { list: 'mb.screen.list', selection: 'mb.screen.selection', insights: 'mb.screen.insights' };
+
+/** Waits for the route's screen marker, then for its root element (island content can follow the host's marker). */
 async function screen(journey, route, from) {
   await waitMarker(journey, 'screen', (m) => m.payloadFields.r === route, 15000, from);
-  await sleep(400);
-  return dump();
+  const root = SCREEN_ROOT[route] ?? 'mb.screen.detail';
+  const deadline = Date.now() + 10000;
+  for (;;) {
+    await sleep(400);
+    const ui = await dump();
+    const ready = ui.find(root) && (route !== 'list' || ui.nodes.some((n) => /^mb\.row\.\d+\.label$/.test(n.id)));
+    if (ready || Date.now() > deadline) return ui;
+  }
 }
 
 /** Highest seq the app can have applied now: the replay is paced at the profile rate from stream.open. */
@@ -236,6 +283,7 @@ model.fmtValue = (v) => `${Math.floor(v / 100)}.${String(v % 100).padStart(2, '0
 
 async function main() {
   await adb(['wait-for-device']);
+  await installDumper();
   density = Number(/(\d+)\s*$/m.exec((await sh('wm density')).stdout)?.[1] ?? 160) / 160;
   const designSha256 = sha256File(join(repo, 'design.md'));
   const artifactSha256 = sha256File(apk);
@@ -301,6 +349,7 @@ async function main() {
   });
 
   await runCheck('navigation', async () => {
+    ui = await ensureList();
     let from = markers.length;
     await tap(ui.find('mb.nav.selection') ?? fail0('mb.nav.selection'));
     let s = await screen(j, 'selection', from);
@@ -325,6 +374,7 @@ async function main() {
   });
 
   await runCheck('insights', async () => {
+    ui = await ensureList();
     const from = markers.length;
     await tap(ui.find('mb.nav.insights') ?? fail0('mb.nav.insights'));
     const s = await screen(j, 'insights', from);
@@ -352,6 +402,7 @@ async function main() {
   });
 
   await runCheck('selection-semantics', async () => {
+    ui = await ensureList();
     const rows = ui.nodes.filter((n) => /^mb\.row\.\d+$/.test(n.id)).map((n) => Number(n.id.split('.')[2]));
     const row = rows.find((i) => !selection.some((s) => s.i === i));
     expect('selection-semantics', row !== undefined, 'no visible unselected row');
@@ -409,7 +460,7 @@ async function main() {
     await foreground();
     await waitMarker(j, 'fg', () => true, 15000, from);
     await sleep(800);
-    ui = await dump();
+    ui = await ensureList();
     from = markers.length;
     await tap(ui.find('mb.row.2.label') ?? fail0('mb.row.2.label'));
     await screen(j, 'detail/2', from);
