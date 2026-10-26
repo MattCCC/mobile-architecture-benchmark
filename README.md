@@ -43,9 +43,9 @@ make check
 
 ## Provenance and potential bias
 
-The initial implementations were ported from the maintainers' earlier prototypes, partly with AI-assisted tooling.
-Optimisation expertise may differ between candidates. Framework experts are invited to review and improve any
-candidate through pull requests. Changes are judged by the same acceptance checks and measurement method.
+The initial implementations were ported from the maintainers' earlier prototypes. Optimisation expertise may differ
+between candidates. Framework experts are invited to review and improve any candidate through pull requests. Changes
+are judged by the same acceptance checks and measurement method.
 
 ## License
 
