@@ -108,6 +108,8 @@ test('proc status, badging, resolve-activity, broadcast, crash', () => {
   assert.deepEqual(parseBadging("package: name='org.example.a' versionCode='1'\nsdkVersion:'24'\ntargetSdkVersion:'36'\nnative-code: 'arm64-v8a'\napplication-debuggable\n"),
     { packageName: 'org.example.a', debuggable: true, minSdk: 24, targetSdk: 36, nativeCode: ['arm64-v8a'] });
   assert.equal(parseBadging("package: name='org.example.a'\n").debuggable, false);
+  // build-tools 37 aapt2 spells the minimum SDK line minSdkVersion.
+  assert.equal(parseBadging("package: name='org.example.a'\nminSdkVersion:'24'\ntargetSdkVersion:'36'\n").minSdk, 24);
   assert.equal(parseResolveActivity('priority=0 preferredOrder=0\norg.example.a/.MainActivity\n'), 'org.example.a/.MainActivity');
   assert.equal(parseResolveActivity('No activity found\n'), null);
   assert.equal(parseBroadcastResult('Broadcasting: Intent { ... }\nBroadcast completed: result=1\n'), 1);

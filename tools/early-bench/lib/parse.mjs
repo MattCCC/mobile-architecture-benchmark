@@ -201,7 +201,8 @@ export function parseProcStatus(text) {
 export function parseBadging(text) {
   const t = String(text ?? '');
   const pkg = /package: name='([^']+)'/.exec(t);
-  const min = /^sdkVersion:'(\d+)'/m.exec(t);
+  // aapt2 from build-tools 37 prints minSdkVersion:'N'; older versions print sdkVersion:'N'.
+  const min = /^(?:minSdkVersion|sdkVersion):'(\d+)'/m.exec(t);
   const target = /^targetSdkVersion:'(\d+)'/m.exec(t);
   const native = /^native-code:\s*(.*)$/m.exec(t);
   return {
