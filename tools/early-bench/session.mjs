@@ -32,7 +32,7 @@ export const TOOL_VERSION = '0.2.0';
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 const USAGE = `usage: node session.mjs --platform android|ios --repo <repo> --out <sessions dir> --artifacts <frozen dir>
-  --candidates a,b --run-id <id> --design-sha256 <hex> [options]
+  --candidates a,b --run-id <id> [--design <path>] [options]
 options:
   --journeys <n>           journeys per candidate for each startup scenario (default 10)
   --memory-journeys <n>    journeys per candidate for idle memory (default: --journeys)
@@ -47,6 +47,7 @@ options:
   --overrides <file>       JSON {candidate: {android|ios: {...candidate.json platform fields}}}
   --expect-artifact id:platform=<sha256 | prefix…suffix>   verified build hash (repeatable); mismatch -> not-measured
   --verification-note <t>  where the verified-candidate list came from
+  --design <path>          normative design file (default: <repo>/design.md); its bytes are hashed by the runner
   --design-ref <t>         label of the design revision
   --other-devices abort|wait|record   foreign emulators/simulators at session start (default abort)
   --other-devices-wait-s <s>          how long "wait" waits before aborting (default 120)
@@ -60,7 +61,7 @@ function cli(argv) {
     args: argv,
     options: {
       platform: { type: 'string' }, repo: { type: 'string' }, out: { type: 'string' }, artifacts: { type: 'string' },
-      candidates: { type: 'string' }, 'run-id': { type: 'string' }, 'design-sha256': { type: 'string' },
+      candidates: { type: 'string' }, 'run-id': { type: 'string' }, design: { type: 'string' },
       'design-ref': { type: 'string', default: '' }, 'verification-note': { type: 'string', default: '' },
       journeys: { type: 'string', default: '10' }, 'memory-journeys': { type: 'string' }, 'idle-s': { type: 'string', default: '30' },
       profile: { type: 'string', default: 'representative' },
@@ -79,7 +80,7 @@ function cli(argv) {
     process.stdout.write(`${USAGE}\n`);
     process.exit(0);
   }
-  const need = ['platform', 'repo', 'out', 'artifacts', 'candidates', 'run-id', 'design-sha256'];
+  const need = ['platform', 'repo', 'out', 'artifacts', 'candidates', 'run-id'];
   const missing = need.filter((k) => !values[k]);
   const int = (k, lo, hi) => {
     const n = Number(values[k]);
@@ -101,8 +102,10 @@ function cli(argv) {
     }
     expect[`${m[1]}:${m[2]}`] = { ...parsed, text: m[3] };
   }
-  if (!/^[0-9a-f]{64}$/.test(values['design-sha256'])) {
-    throw new Error('--design-sha256 must be 64 hex');
+  const repo = resolve(values.repo);
+  const designPath = resolve(repo, values.design ?? 'design.md');
+  if (!existsSync(designPath)) {
+    throw new Error(`design file not found: ${designPath}`);
   }
   if (!/^[a-z]+$/.test(values.profile)) {
     throw new Error('--profile must match [a-z]+');
@@ -111,13 +114,13 @@ function cli(argv) {
   values['memory-journeys'] ??= String(journeys);
   return {
     platform: values.platform,
-    repo: resolve(values.repo),
+    repo,
     out: resolve(values.out),
     artifacts: resolve(values.artifacts),
     candidates: values.candidates.split(',').map((x) => x.trim()).filter(Boolean),
     runId: values['run-id'],
-    designSha256: values['design-sha256'],
-    designRef: values['design-ref'],
+    designSha256: sha256(readFileSync(designPath)),
+    designRef: values['design-ref'] || (values.design ?? 'design.md'),
     verificationNote: values['verification-note'],
     journeys,
     memoryJourneys: int('memory-journeys', 0, 100),

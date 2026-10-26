@@ -30,6 +30,7 @@ configuration and what has been verified on each platform.
 - `candidates/<id>/`: one directory per candidate, with `candidate.json` (self-description), `candidate.mk` (make
   targets) and a README.
 - `tools/`: benchmark tooling. Node.js built-ins only, managed with npm.
+- `design.md`: the normative workload, eligibility and reporting contract; every session records its content hash.
 
 ## Quick start
 

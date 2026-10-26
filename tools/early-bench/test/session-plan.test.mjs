@@ -15,6 +15,7 @@ const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', 'session.mjs');
 
 function fakeRepo() {
   const d = mkdtempSync(join(tmpdir(), 'eb-repo-'));
+  writeFileSync(join(d, 'design.md'), 'test design\n');
   for (const [id, pkg] of [['native', 'org.example.mobilebench.nativeapp'], ['flutter', 'org.example.mobilebench.flutter'], ['expo', 'org.example.mobilebench.expo']]) {
     mkdirSync(join(d, 'candidates', id, 'out'), { recursive: true });
     writeFileSync(join(d, 'candidates', id, 'out', 'app.apk'), `apk-${id}`);
@@ -28,7 +29,7 @@ function fakeRepo() {
 
 function plan(repo, extra) {
   const out = execFileSync(process.execPath, [CLI, '--platform', 'android', '--repo', repo, '--out', join(repo, 'o'), '--artifacts', join(repo, 'f'),
-    '--run-id', 'r1', '--design-sha256', 'a'.repeat(64), '--seed', '7', '--plan-only', ...extra], { encoding: 'utf8' });
+    '--run-id', 'r1', '--seed', '7', '--plan-only', ...extra], { encoding: 'utf8' });
   return JSON.parse(out);
 }
 

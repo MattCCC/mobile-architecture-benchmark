@@ -148,14 +148,15 @@ Build provenance:
 
 ```
 node tools/early-bench/session.mjs --platform android --repo . --out <sessions> --artifacts <frozen> \
-  --candidates native,flutter --run-id <id> --design-sha256 <sha256 of the design document> [--plan-only]
+  --candidates native,flutter --run-id <id> [--design design.md] [--plan-only]
 node tools/early-bench/combine.mjs --in <sessions> --out <summary.md> [--invalid-from <json>]
 node tools/early-bench/finalize.mjs --session <sessions>/<id> --repo . --abort-reason <cause> [--ended-at <ISO>]
 node tools/early-bench/dry-run.mjs --package <pkg> --am <file> --logcat <file> --meminfo <file>
 node --test tools/early-bench/test/
 ```
 
-`--plan-only` resolves candidates, hashes artifacts and prints the plan and schedule without touching a device.
+The runner reads and hashes the design file itself; callers cannot attach an arbitrary design digest. `--plan-only`
+resolves candidates, hashes artifacts and prints the plan and schedule without touching a device.
 `combine.mjs` is deterministic (identical input gives byte-identical output). It pools observations only when
 method id, environment (class, platform, host, device configuration and settings), artifact SHA-256, stream
 source, fixture and build class match, treats each session as a block, prints per-session medians and pooled
