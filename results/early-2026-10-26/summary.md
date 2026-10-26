@@ -21,6 +21,7 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 | 20261026T145605Z-android-333e | android | completed | 2026-10-26T14:56:05.272Z | 4301 | expo, flutter, island-flutter, island-nativescript, island-rn, native, nativescript, repack | 240 / 240 | f7de5709b053 | 4.49 → 3.23 | AC Power | – | all requested | cd6ed4c2d32e |
 | 20261026T160803Z-ios-e44a | ios | completed | 2026-10-26T16:08:03.757Z | 2977 | flutter@debug, island-flutter@debug, island-nativescript, island-rn, native, nativescript | 120 / 120 | f7de5709b053 | 7.9 → 2.45 | AC Power | – | all requested | ca414b1fe3a5 |
 | 20261026T165855Z-ios-a580 | ios | completed | 2026-10-26T16:58:55.566Z | 3983 | expo, flutter@debug, island-flutter@debug, island-nativescript, island-rn, native, nativescript, repack | 160 / 160 | f7de5709b053 | 13.12 → 2.54 | AC Power | – | all requested | c99c5d610025 |
+| 20261026T214557Z-ios-cc6b | ios | completed | 2026-10-26T21:45:57.572Z | 1074 | flutter@debug, nativescript | 40 / 40 | f7de5709b053 | 46.02 → 3.03 | AC Power | host-load-above-cpu-count | all requested | 3f8d8407d389 |
 
 Excluded sessions (files kept):
 
@@ -142,6 +143,7 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 | expo | `startup.process_to_fui/early-ios-markers/1` | ms | 432abf3aaad5 | env-2bff91eb9eac | replay, 1.0.0/representative | rn-benchkit-interim/1 | 20261026T165855Z-ios-a580: 1677.9 (n=10) | 10 | 1677.9 | 1710.5 † | 1664.7 | 1717.4 | measured: 10 |
 | island-nativescript | `startup.process_to_fui/early-ios-markers/1` | ms | e26aa529f00d | env-2bff91eb9eac | replay, 1.0.0/representative | island-host-nativescript-direct-interim/1 | 20261026T160803Z-ios-e44a: 388.3 (n=10)<br>20261026T165855Z-ios-a580: 386.1 (n=10) | 20 | 387.0 | 392.6 | 378.5 | 402.9 | measured: 20 |
 | island-rn | `startup.process_to_fui/early-ios-markers/1` | ms | ecb389f611ca | env-2bff91eb9eac | replay, 1.0.0/representative | island-host-rn-forwarder-interim/1 | 20261026T160803Z-ios-e44a: 394.1 (n=10)<br>20261026T165855Z-ios-a580: 397.3 (n=10) | 20 | 395.2 | 404.2 | 390.4 | 404.9 | measured: 20 |
+| nativescript | `startup.process_to_fui/early-ios-markers/1` | ms | 2b148839a01c | env-2bff91eb9eac | replay, 1.0.0/representative | nativescript-local-interim/1 | 20261026T214557Z-ios-cc6b: 1866.3 (n=10) | 10 | 1866.3 | 1913.3 † | 1860.3 | 1940.2 | measured: 10 |
 | nativescript | `startup.process_to_fui/early-ios-markers/1` | ms | be5d81a11bda | env-2bff91eb9eac | replay, 1.0.0/representative | nativescript-local-interim/1 | – | 0 | – | – | – | – | unavailable (marker-missing:proc.anchor): 20 |
 | native | `startup.process_to_fui/early-ios-markers/1` | ms | 630e0008e592 | env-2bff91eb9eac | replay, 1.0.0/representative | native-ios-local-interim/1 | 20261026T160803Z-ios-e44a: 375.0 (n=10)<br>20261026T165855Z-ios-a580: 373.2 (n=10) | 20 | 373.9 | 380.6 | 368.3 | 381.4 | measured: 20 |
 | repack | `startup.process_to_fui/early-ios-markers/1` | ms | bfbacbdb8b47 | env-2bff91eb9eac | replay, 1.0.0/representative | rn-benchkit-interim/1 | 20261026T165855Z-ios-a580: 447.9 (n=10) | 10 | 447.9 | 455.9 † | 435.9 | 456.6 | measured: 10 |
@@ -155,6 +157,7 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 | expo | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | 432abf3aaad5 | env-2bff91eb9eac | replay, 1.0.0/representative | rn-benchkit-interim/1 | 20261026T165855Z-ios-a580: 74.14 (n=10) | 10 | 74.14 | 75.10 † | 73.69 | 75.14 | measured: 10 |
 | island-nativescript | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | e26aa529f00d | env-2bff91eb9eac | replay, 1.0.0/representative | island-host-nativescript-direct-interim/1 | 20261026T160803Z-ios-e44a: 18.57 (n=10)<br>20261026T165855Z-ios-a580: 18.59 (n=10) | 20 | 18.58 | 18.68 | 18.46 | 18.71 | measured: 20 |
 | island-rn | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | ecb389f611ca | env-2bff91eb9eac | replay, 1.0.0/representative | island-host-rn-forwarder-interim/1 | 20261026T160803Z-ios-e44a: 18.75 (n=10)<br>20261026T165855Z-ios-a580: 18.76 (n=10) | 20 | 18.76 | 18.82 | 18.56 | 18.83 | measured: 20 |
+| nativescript | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | 2b148839a01c | env-2bff91eb9eac | replay, 1.0.0/representative | nativescript-local-interim/1 | 20261026T214557Z-ios-cc6b: 48.83 (n=10) | 10 | 48.83 | 49.04 † | 48.55 | 49.05 | measured: 10 |
 | nativescript | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | be5d81a11bda | env-2bff91eb9eac | replay, 1.0.0/representative | nativescript-local-interim/1 | – | 0 | – | – | – | – | unavailable (marker-missing:mem): 20 |
 | native | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | 630e0008e592 | env-2bff91eb9eac | replay, 1.0.0/representative | native-ios-local-interim/1 | 20261026T160803Z-ios-e44a: 17.97 (n=10)<br>20261026T165855Z-ios-a580: 17.93 (n=10) | 20 | 17.96 | 18.02 | 17.80 | 18.06 | measured: 20 |
 | repack | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | bfbacbdb8b47 | env-2bff91eb9eac | replay, 1.0.0/representative | rn-benchkit-interim/1 | 20261026T165855Z-ios-a580: 70.12 (n=10) | 10 | 70.12 | 70.82 † | 69.75 | 71.02 | measured: 10 |
@@ -168,6 +171,7 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 | expo | `size.ios.simulator_app/app-dir-file-bytes/1` | 432abf3aaad5 | 40168782 | 38.31 | 20261026T165855Z-ios-a580 | measured: 1 |
 | island-nativescript | `size.ios.simulator_app/app-dir-file-bytes/1` | e26aa529f00d | 74794958 | 71.33 | 20261026T160803Z-ios-e44a, 20261026T165855Z-ios-a580 | measured: 2 |
 | island-rn | `size.ios.simulator_app/app-dir-file-bytes/1` | ecb389f611ca | 24137198 | 23.02 | 20261026T160803Z-ios-e44a, 20261026T165855Z-ios-a580 | measured: 2 |
+| nativescript | `size.ios.simulator_app/app-dir-file-bytes/1` | 2b148839a01c | 74372488 | 70.93 | 20261026T214557Z-ios-cc6b | measured: 1 |
 | nativescript | `size.ios.simulator_app/app-dir-file-bytes/1` | be5d81a11bda | 74371445 | 70.93 | 20261026T160803Z-ios-e44a, 20261026T165855Z-ios-a580 | measured: 2 |
 | native | `size.ios.simulator_app/app-dir-file-bytes/1` | 630e0008e592 | 2179971 | 2.08 | 20261026T160803Z-ios-e44a, 20261026T165855Z-ios-a580 | measured: 2 |
 | repack | `size.ios.simulator_app/app-dir-file-bytes/1` | bfbacbdb8b47 | 25385796 | 24.21 | 20261026T165855Z-ios-a580 | measured: 1 |
@@ -186,6 +190,7 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 | candidate | method id | unit | artifact sha256 | environment | stream, fixture | instrumentation | per-session median (n) | pooled N | median | p95 | min | max | observation status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | flutter@debug | `startup.process_to_fui/early-ios-markers/1` | ms | a761b769783f | env-2bff91eb9eac | replay, 1.0.0/representative | flutter-local-interim/1 | – | 0 | – | – | – | – | unavailable (marker-missing:proc.anchor): 20 |
+| flutter@debug | `startup.process_to_fui/early-ios-markers/1` | ms | c845457eca96 | env-2bff91eb9eac | replay, 1.0.0/representative | flutter-local-interim/1 | 20261026T214557Z-ios-cc6b: 2286.6 (n=8) | 8 | 2286.6 | 2301.3 † | 2278.4 | 2303.9 | failed (instrument-error): 2<br>measured: 8 |
 | island-flutter@debug | `startup.process_to_fui/early-ios-markers/1` | ms | 7f66eefc3695 | env-2bff91eb9eac | replay, 1.0.0/representative | island-host-flutter-channel-interim/1 | 20261026T160803Z-ios-e44a: 431.1 (n=10)<br>20261026T165855Z-ios-a580: 431.8 (n=10) | 20 | 431.1 | 442.5 | 425.0 | 444.0 | measured: 20 |
 
 #### early.idle-memory (scenario ref D1; process-cold)
@@ -195,6 +200,7 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 | candidate | method id | unit | artifact sha256 | environment | stream, fixture | instrumentation | per-session median (n) | pooled N | median | p95 | min | max | observation status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | flutter@debug | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | a761b769783f | env-2bff91eb9eac | replay, 1.0.0/representative | flutter-local-interim/1 | – | 0 | – | – | – | – | unavailable (marker-missing:mem): 20 |
+| flutter@debug | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | c845457eca96 | env-2bff91eb9eac | replay, 1.0.0/representative | flutter-local-interim/1 | 20261026T214557Z-ios-cc6b: 116.21 (n=9) | 9 | 116.21 | 116.66 † | 115.08 | 116.69 | failed (instrument-error): 1<br>measured: 9 |
 | island-flutter@debug | `memory.ios.phys_footprint/early-mem-marker-background/1` | MiB | 7f66eefc3695 | env-2bff91eb9eac | replay, 1.0.0/representative | island-host-flutter-channel-interim/1 | 20261026T160803Z-ios-e44a: 19.03 (n=10)<br>20261026T165855Z-ios-a580: 19.04 (n=10) | 20 | 19.03 | 19.10 | 18.94 | 19.13 | measured: 20 |
 
 #### early.size (build-unit observations: one exact value per artifact, not pooled)
@@ -204,6 +210,7 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 | candidate | method id | artifact sha256 | bytes (exact) | MiB | recorded in sessions | observation status |
 | --- | --- | --- | --- | --- | --- | --- |
 | flutter@debug | `size.ios.simulator_app/app-dir-file-bytes/1` | a761b769783f | 103013172 | 98.24 | 20261026T160803Z-ios-e44a, 20261026T165855Z-ios-a580 | measured: 2 |
+| flutter@debug | `size.ios.simulator_app/app-dir-file-bytes/1` | c845457eca96 | 103044364 | 98.27 | 20261026T214557Z-ios-cc6b | measured: 1 |
 | island-flutter@debug | `size.ios.simulator_app/app-dir-file-bytes/1` | 7f66eefc3695 | 103911152 | 99.10 | 20261026T160803Z-ios-e44a, 20261026T165855Z-ios-a580 | measured: 2 |
 
 ## Shared sessions and the timing confound
@@ -243,10 +250,11 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 
 _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator / iOS simulator on an Apple silicon host: not representative of physical devices · not comparable with legacy or pilot numbers_
 
-| session | expo | island-flutter@debug | island-nativescript | island-rn | native | repack |
-| --- | --- | --- | --- | --- | --- | --- |
-| 20261026T160803Z-ios-e44a |  | 7f66eefc3695 | e26aa529f00d | ecb389f611ca | 630e0008e592 |  |
-| 20261026T165855Z-ios-a580 | 432abf3aaad5 | 7f66eefc3695 | e26aa529f00d | ecb389f611ca | 630e0008e592 | bfbacbdb8b47 |
+| session | expo | flutter@debug | island-flutter@debug | island-nativescript | island-rn | native | nativescript | repack |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20261026T160803Z-ios-e44a |  |  | 7f66eefc3695 | e26aa529f00d | ecb389f611ca | 630e0008e592 |  |  |
+| 20261026T165855Z-ios-a580 | 432abf3aaad5 |  | 7f66eefc3695 | e26aa529f00d | ecb389f611ca | 630e0008e592 |  | bfbacbdb8b47 |
+| 20261026T214557Z-ios-cc6b |  | c845457eca96 |  |  |  |  | 2b148839a01c |  |
 
 One line per pool cell (candidate x artifact). Each comparison group has one method, environment, stream
 source, fixture, instrumentation id and build class; its shared sessions are those in which every candidate of the group has data.
@@ -301,12 +309,12 @@ _EARLY SESSIONS: emulator/simulator, host busy, descriptive · Android emulator 
 - android / nativescript: bundles-replay-stream
 - android / repack: bundles-replay-stream
 - ios / expo: bundles-replay-stream, descriptive-simulator-build, simulator-host-process
-- ios / flutter@debug: bundles-replay-stream, descriptive-simulator-build, flutter-semantics-forced-on-simulator
+- ios / flutter@debug: bundles-replay-stream, descriptive-simulator-build, flutter-semantics-forced-on-simulator, host-load-above-cpu-count, simulator-host-process
 - ios / island-flutter@debug: bundles-replay-stream, descriptive-simulator-build, simulator-host-process
 - ios / island-nativescript: bundles-replay-stream, descriptive-simulator-build, simulator-host-process
 - ios / island-rn: bundles-replay-stream, descriptive-simulator-build, simulator-host-process
 - ios / native: bundles-replay-stream, descriptive-simulator-build, simulator-host-process
-- ios / nativescript: bundles-replay-stream, descriptive-simulator-build
+- ios / nativescript: bundles-replay-stream, descriptive-simulator-build, host-load-above-cpu-count, simulator-host-process
 - ios / repack: bundles-replay-stream, descriptive-simulator-build, simulator-host-process
 - All sessions: emulator/simulator on a shared Apple silicon host that ran other workflows (builds) between
   sessions; host load is recorded per session. Frame, energy and thermal metrics are not part of early sessions.

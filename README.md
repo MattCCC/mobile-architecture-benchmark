@@ -142,10 +142,10 @@ warm start, sizes, artifact hashes and traceability: [results/early-2026-10-26/s
 | island-nativescript | 160.5 ms | 162.5 ms | 46.7 MiB | 387.0 ms | 18.6 MiB |
 | expo | 151.5 ms | 348.5 ms | 107.0 MiB | 1677.9 ms | 74.1 MiB |
 | repack | 145.0 ms | 369.5 ms | 97.0 MiB | 447.9 ms | 70.1 MiB |
-| nativescript | 320.5 ms | 322.5 ms | 78.0 MiB | not measured¹ | not measured¹ |
-| flutter | 667.0 ms | 667.0 ms | 66.7 MiB | not measured¹ (debug) | not measured¹ (debug) |
+| nativescript | 320.5 ms | 322.5 ms | 78.0 MiB | 1866.3 ms¹ | 48.8 MiB¹ |
+| flutter | 667.0 ms | 667.0 ms | 66.7 MiB | 2286.6 ms¹ (debug, n=8) | 116.2 MiB¹ (debug, n=9) |
 
-¹ The iOS builds of `nativescript` and `flutter` do not emit the `proc.anchor` and `mem` markers yet. Island
+¹ Measured in a follow-up iOS session after their iOS builds gained the `proc.anchor` and `mem` markers (other cells unchanged); flutter had 3 instrument errors in 20 runs. Island
 numbers measure the native shell at startup (islands load lazily on first open). iOS debug builds are reported
 separately and are not comparable with release builds.
 
