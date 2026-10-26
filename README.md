@@ -23,7 +23,7 @@ The entire app, every screen, is written in one framework.
 | Id | Architecture | Android build | iOS simulator build |
 | --- | --- | --- | --- |
 | `native` | Fully native: Jetpack Compose (Android) and UIKit (iOS) | release | release |
-| `flutter` | Flutter | release | device only (Flutter has no release simulator build) |
+| `flutter` | Flutter | release | debug (Flutter has no release simulator build) |
 | `expo` | React Native with Expo | release | release |
 | `repack` | React Native with Re.Pack and remote modules | release | release |
 | `nativescript` | NativeScript (core + TypeScript) | release | release |
