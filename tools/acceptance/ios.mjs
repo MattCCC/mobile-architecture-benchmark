@@ -173,8 +173,7 @@ const device = {
   async stop() {
     await simctl(['terminate', udid, bundle]);
   },
-  home: () => command('home'),
-  foreground: () => command('activate'),
+  home: () => command('home'),  foreground: () => command('activate'),
   dump,
   tap,
   async back(ui) {

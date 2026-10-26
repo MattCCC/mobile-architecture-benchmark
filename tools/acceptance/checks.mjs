@@ -23,6 +23,13 @@ import { CONTRACT } from './lib.mjs';
 import { ReferenceModel, itemLabel, OPTION_KEYS } from './model.mjs';
 
 const SCREEN_ROOT = { list: 'mb.screen.list', selection: 'mb.screen.selection', insights: 'mb.screen.insights' };
+// Content that must be on screen before a dump counts: a host's screen container can precede an island's
+// accessibility tree, and a list container its rows.
+const SCREEN_CONTENT = {
+  list: [/^mb\.row\.\d+\.label$/],
+  insights: [/^mb\.insights\.top$/, /^mb\.insights\.source$/],
+  detail: [/^mb\.detail\.values\.a$/],
+};
 
 export function markerFields(payload) {
   return Object.fromEntries(payload.split(';').filter((kv) => kv.includes('=')).map((kv) => kv.split('=')));
@@ -32,7 +39,9 @@ export function markerFields(payload) {
  * iOS containers repeat their children's labels as an aggregate label), else its own. */
 export function textOf(node) {
   if (!node) return '';
-  const inner = node.all.map((n) => n.text || n.desc).filter(Boolean);
+  const own = (n) => n.text || n.desc;
+  // Leaves only: an element and its static-text child often carry the same label.
+  const inner = node.all.filter((n) => own(n) && !n.all.some(own)).map(own);
   return inner.length > 0 ? inner.join('\n') : [node.text, node.desc].filter(Boolean).join('\n');
 }
 
@@ -89,15 +98,22 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
     throw new Error('cannot return to the List screen');
   }
 
-  /** Waits for the route's screen marker, then for its root element (island content can follow the host's marker). */
+  /** Waits for the route's screen marker (a navigation), then for its root element. */
   async function screen(journey, route, from) {
     await waitMarker(journey, 'screen', (m) => m.payloadFields.r === route, 15000, from);
+    return shown(route);
+  }
+
+  /** Waits for the route's root element (island content can follow the host's marker; an initial or restored route
+   * is not a navigation, and some candidates mark no `screen` for it). */
+  async function shown(route) {
     const root = SCREEN_ROOT[route] ?? 'mb.screen.detail';
     const deadline = Date.now() + 10000;
     for (;;) {
       await sleep(400);
       const ui = await device.dump();
-      const ready = ui.find(root) && (route !== 'list' || ui.nodes.some((n) => /^mb\.row\.\d+\.label$/.test(n.id)));
+      const content = SCREEN_CONTENT[route.split('/')[0]] ?? [];
+      const ready = ui.find(root) && content.every((re) => ui.nodes.some((n) => re.test(n.id)));
       if (ready || Date.now() > deadline) return ui;
     }
   }
@@ -110,10 +126,18 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
     return device.secondsSince(open).then((s) => from - 1 + Math.ceil(s * model.rate) + 3);
   }
 
-  /** Rows on screen: inside the list's bounds (iOS snapshots also contain off-screen cells). */
-  const rowIndices = (ui) => {
+  /** The list's on-screen bounds: its frame clipped to the window (an iOS table may report its content frame). */
+  const listBounds = (ui) => {
     const list = ui.find('mb.list');
-    const visible = (n) => !list || (n.bounds.b > list.bounds.t + 1 && n.bounds.t < list.bounds.b - 1);
+    if (!list) return null;
+    const w = ui.nodes[0].bounds;
+    return { l: Math.max(list.bounds.l, w.l), t: Math.max(list.bounds.t, w.t), r: Math.min(list.bounds.r, w.r), b: Math.min(list.bounds.b, w.b) };
+  };
+
+  /** Rows on screen: inside the list's on-screen bounds (iOS snapshots also contain off-screen cells). */
+  const rowIndices = (ui) => {
+    const list = listBounds(ui);
+    const visible = (n) => !list || (n.bounds.b > list.t + 1 && n.bounds.t < list.b - 1);
     return ui.nodes.filter((n) => /^mb\.row\.\d+$/.test(n.id) && visible(n)).map((n) => Number(n.id.split('.')[2]));
   };
 
@@ -173,7 +197,7 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
 
   let j = await launch();
   const fui = await waitMarker(j, 'fui', () => true, 30000);
-  let ui = await screen(j, 'list', 0);
+  let ui = await shown('list');
   const hi0 = await seqUpperBound(j);
 
   await runCheck('initial-state', async () => {
@@ -185,7 +209,8 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
   });
 
   await runCheck('list-geometry', async () => {
-    const list = need(ui.find('mb.list'), 'mb.list');
+    need(ui.find('mb.list'), 'mb.list');
+    const list = { bounds: listBounds(ui) };
     const extent = device.rowExtent;
     const rows = ui.nodes.filter((n) => /^mb\.row\.\d+$/.test(n.id));
     // Dumped bounds may be clipped to the viewport: a row touching a list edge may be partly visible.
@@ -238,7 +263,8 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
     expect(s.find('mb.screen.insights'), 'mb.screen.insights missing');
     const top = [...textOf(s.find('mb.insights.top')).matchAll(/Item (\d+)\D+?(\d+\.\d\d)/g)].map((m) => [Number(m[1]), m[2]]);
     const buckets = (textOf(s.find('mb.insights.buckets')).match(/\d+/g) ?? []).map(Number);
-    expect(textOf(s.find('mb.insights.source')).includes('embedded'), 'Source text');
+    const sourceText = textOf(s.find('mb.insights.source'));
+    expect(sourceText.includes('embedded'), `mb.insights.source shows "${sourceText}"`);
     const hi = await seqUpperBound(j);
     let match = null;
     for (const m of model.insights(0, hi)) {
@@ -317,7 +343,7 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
     expect(r.payloadFields.r === 'detail/2', `restored route ${r.payloadFields.r}`);
     const open = await waitMarker(j, 'stream.open', () => true, 15000);
     expect(Number(open.payloadFields.from) === s + 1, `restore resumed from ${open.payloadFields.from}, expected ${s + 1}`);
-    const d = await screen(j, 'detail/2', 0);
+    const d = await shown('detail/2');
     expect(d.find('mb.screen.detail'), 'restored screen is not Detail');
     const a = valueOf(d.find('mb.detail.values.a'));
     const allowed = [...model.valueSet(2, 0, s, await seqUpperBound(j))].map(fmtValue);
