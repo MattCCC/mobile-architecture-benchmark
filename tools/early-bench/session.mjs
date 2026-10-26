@@ -934,8 +934,9 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     for (const b of blockList) {
       const blockJourneys = planned.filter((p) => p.scenarioId === g.id && p.block === b.block && p.blockSet === b.set);
       const tag = `${b.set === 'debug' ? 'd' : 'b'}${String(b.block).padStart(2, '0')}`;
+      let rerunIds = null; // attempt 2 re-runs only the candidates whose ART state changed; the others keep attempt 1
       for (let attempt = 1; attempt <= 2; attempt += 1) {
-        const runList = blockJourneys.map((p) => ({ ...p, attempt, journeyId: attempt === 1 ? p.journeyId : `${p.journeyId}.a2` }));
+        const runList = blockJourneys.filter((p) => rerunIds === null || rerunIds.includes(p.candidateId)).map((p) => ({ ...p, attempt, journeyId: attempt === 1 ? p.journeyId : `${p.journeyId}.a2` }));
         if (!ctx.abort) {
           await forceStopAll(); // R-PROC at the start of every block (driver invocation)
         }
@@ -986,6 +987,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
           artAfter[id] = again.after.summary;
         }
         artBefore = artAfter;
+        rerunIds = changed;
         log.warn('block.rerun', { group: g.id, block: tag, changed });
       }
     }
