@@ -5,10 +5,9 @@ reference app: a long, live-updating list of items with selectable options, a de
 feature. All candidates are measured with one shared method, the same deterministic workload and the same functional
 acceptance checks.
 
-> **Status: work in progress.** All eight candidates build and launch, but no results are published yet: the
-> acceptance gate that admits a build into a benchmark session is not operational (see
-> [Current status](#current-status)). Early runs on the Android emulator and the iOS simulator are pipeline
-> validation only and are not representative of physical devices.
+> **Status: work in progress.** All eight candidates build and pass black-box acceptance on the Android emulator
+> and the iOS simulator; no results are published yet (see [Current status](#current-status)). Emulator and
+> simulator sessions are descriptive and not representative of physical devices.
 
 ## What is being compared
 
@@ -83,32 +82,32 @@ digest, so each candidate is shown to do equivalent work. See `design.md` for th
 
 ## Running a benchmark session
 
-Example for `native` and `flutter` on the Android emulator (AVD `mobilebench_api37`). On iOS use
-`--platform ios` with the simulator `mobilebench-iphone`. Write outputs under `results/local/`, which git ignores.
+Reference devices: the Android emulator AVD `mobilebench_api37` (API 37, arm64) and the iOS simulator
+`mobilebench-iphone` (iPhone 17, iOS 27.0). Outputs go under `results/local/`, which git ignores.
 
 ```sh
-# 1. Build the release artifacts and print their paths
-make build-native-android build-flutter-android
-make artifacts-native-android artifacts-flutter-android
+# 1. Build every candidate (per candidate: make build-<id>-android / build-<id>-ios)
+make build-native-android build-native-ios   # ... and so on for each candidate
 
-# 2. Each artifact needs a passing acceptance receipt from the platform acceptance driver
-#    (see tools/acceptance/README.md), e.g. results/acceptance/native-android/receipt.json
+# 2. Acceptance: the black-box drivers check every built artifact on the running reference device and write
+#    artifact-bound receipts to results/local/acceptance/<id>-<platform>/ (see tools/acceptance/README.md)
+make acceptance-android
+make acceptance-ios
 
-# 3. Dry run: resolve candidates, hash artifacts and print the schedule without touching a device
-node tools/early-bench/session.mjs --platform android --repo . \
-  --out results/local/sessions --artifacts results/local/frozen \
-  --candidates native,flutter --run-id my-run \
-  --acceptance-receipt native:android=results/acceptance/native-android/receipt.json \
-  --acceptance-receipt flutter:android=results/acceptance/flutter-android/receipt.json \
-  --plan-only
+# 3. Dry run: hash artifacts, verify receipts and print the schedule without measuring
+make early-bench-android EARLY_BENCH_ARGS="--plan-only"
 
-# 4. Run it for real: the same command without --plan-only
+# 4. Measure. The default 30-minute budget covers a seeded subset of candidates (about 12 minutes each); give a
+#    longer budget to measure all of them in one session
+make early-bench-android EARLY_BENCH_ARGS="--budget-min 110 --watchdog-min 120"
+make early-bench-ios EARLY_BENCH_ARGS="--budget-min 110 --watchdog-min 120"
 
-# 5. Combine one or more sessions into a Markdown summary
+# 5. Combine sessions into the Markdown report
 node tools/early-bench/combine.mjs --in results/local/sessions --out results/local/summary.md
 ```
 
-Useful options: `--budget-min` caps session time, `--expect-artifact <id>:<platform>=<sha256>` requires an exact
+Rebuilding a candidate changes its artifact hash and invalidates its receipt, so rerun its acceptance before the next
+session. Useful options: `--budget-min` caps session time, `--expect-artifact <id>:<platform>=<sha256>` requires an exact
 build, and `--stream-source replay|server` selects the stream. If a session is killed, rebuild it with
 `tools/early-bench/finalize.mjs`. The full option list is in `tools/early-bench/README.md`.
 
@@ -147,15 +146,15 @@ candidate/platform cell becomes rankable only after accepted independent review 
 
 | Area | State |
 | --- | --- |
-| Candidates | 8 implemented; all build for Android and the iOS simulator (except `flutter` iOS: device build only) |
+| Candidates | 8 implemented; all build for Android and the iOS simulator (`flutter` and `island-flutter` iOS simulator builds are debug, a Flutter limitation) |
 | Unit and contract tests | `make check` passes |
-| Acceptance receipts | **Missing.** The receipt format and verifier exist; the platform drivers that run the 11 contract checks and write receipts do not, and the `instrumentation-overhead` check also needs the shared calibrated BenchKit |
-| Benchmark runner | Implemented (`tools/early-bench`); without receipts it reports every candidate `not-measured` |
-| Reference devices | Android AVD `mobilebench_api37` and iOS simulator `mobilebench-iphone` (iOS 27.0) must be created locally |
-| Published results | None |
+| Acceptance | Black-box drivers for Android and iOS (`tools/acceptance`); all 8 candidates pass all checks on both platforms, with `instrumentation-overhead` waived (design §6.7), which keeps results descriptive |
+| Benchmark runner | Implemented (`tools/early-bench`); a dry run admits all 8 candidates on both platforms |
+| Reference devices | Android AVD `mobilebench_api37` (API 37) and iOS simulator `mobilebench-iphone` (iPhone 17, iOS 27.0), created locally |
+| Published results | None yet; the first early sessions are next |
 
-Next steps, in order: the Android acceptance driver, then the first Android early session and its `summary.md`
-tables, then the iOS acceptance driver and sessions.
+Next steps: early sessions on both platforms and their `summary.md` tables; then the shared BenchKit with its
+A/B overhead experiment and physical devices, which are needed for eligible (rankable) results.
 
 ## Repository layout
 
