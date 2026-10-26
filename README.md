@@ -60,6 +60,54 @@ digest, so each candidate is shown to do equivalent work. See `design.md` for th
    timing markers that the runner collects.
 4. **Report**: every output is labelled as an early, descriptive emulator/simulator session.
 
+## Running a benchmark session
+
+Example for `native` and `flutter` on the Android emulator (AVD `mobilebench_api37`). On iOS use
+`--platform ios` with the simulator `mobilebench-iphone`. Write outputs under `results/local/`, which git ignores.
+
+```sh
+# 1. Build the release artifacts and print their paths
+make build-native-android build-flutter-android
+make artifacts-native-android artifacts-flutter-android
+
+# 2. Each artifact needs a passing acceptance receipt from the platform acceptance driver
+#    (see tools/acceptance/README.md), e.g. results/acceptance/native-android/receipt.json
+
+# 3. Dry run: resolve candidates, hash artifacts and print the schedule without touching a device
+node tools/early-bench/session.mjs --platform android --repo . \
+  --out results/local/sessions --artifacts results/local/frozen \
+  --candidates native,flutter --run-id my-run \
+  --acceptance-receipt native:android=results/acceptance/native-android/receipt.json \
+  --acceptance-receipt flutter:android=results/acceptance/flutter-android/receipt.json \
+  --plan-only
+
+# 4. Run it for real: the same command without --plan-only
+
+# 5. Combine one or more sessions into a Markdown summary
+node tools/early-bench/combine.mjs --in results/local/sessions --out results/local/summary.md
+```
+
+Useful options: `--budget-min` caps session time, `--expect-artifact <id>:<platform>=<sha256>` requires an exact
+build, and `--stream-source replay|server` selects the stream. If a session is killed, rebuild it with
+`tools/early-bench/finalize.mjs`. The full option list is in `tools/early-bench/README.md`.
+
+## Outcome and reports
+
+Each session writes `results/local/sessions/<sessionId>/` containing:
+
+- `manifest.json`: labels, design hash, plan, seed, environment, builds and counts
+- `schedule.json`: the frozen run order
+- `observations.jsonl`: one measured value (or a `failed` / `not-measured` status with its reason) per line, each
+  linked to the raw lines it was parsed from
+- `journeys.jsonl`, `harness.log.jsonl`, `progress.json`, and `raw/` holding every raw command output, redacted
+  for privacy
+
+`combine.mjs` reads those files and writes the **human-readable report** (`summary.md`): per-session medians and
+pooled N / median / p95 / min / max for each candidate and metric, exact artifact sizes, debug builds in their own
+section, and a shared-session view for comparing candidates side by side. The output is deterministic, and
+values are pooled only when the method, environment, artifact and fixture all match. No session results are
+committed to this repository yet.
+
 ## What is measured today
 
 | Measurement | Android emulator | iOS simulator |
