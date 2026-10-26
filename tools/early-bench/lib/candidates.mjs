@@ -96,6 +96,8 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
     streamSource,
     streamSourceBasis: p.streamSource ? 'candidate.json streamSource' : 'not declared',
     benchmarkBuild: p.benchmarkBuild ?? null,
+    sizeClassification: Array.isArray(p.sizeClassification) ? p.sizeClassification : [],
+    benchmarkPayloadAccounting: p.benchmarkPayloadAccounting ?? { status: 'extractable' },
     buildInputs: inputs.dirs,
     sharedBuildInputs: inputs.shared,
     sharedBuildInputsBasis: inputs.basis,

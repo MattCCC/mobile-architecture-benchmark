@@ -100,7 +100,9 @@ records have status `not-attempted`: they are never counted as candidate failure
 `rawRefs`: file, 1-based line and exact text of every line its value was read from.
 
 Sizes are build-unit observations (`buildId`, no `journeyId`): one exact value per frozen artifact; the summary
-prints exact bytes per build and never pools them into an N.
+prints exact bytes per build and never pools them into an N. Android APK reports also show compressed and
+uncompressed bytes of entries classified as benchmark payload. If a bundler has fused that payload into app code,
+the payload metric is explicitly unavailable rather than guessed or subtracted.
 
 Session directory layout:
 

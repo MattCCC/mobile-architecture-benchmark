@@ -53,6 +53,16 @@ export const METHODS = {
     metricId: 'size.android.aab', platform: 'android', unit: 'bytes', unitOfObservation: 'build',
     procedure: 'byte length of the frozen release AAB', resolution: '1 byte', clock: 'n/a', designRef: 'delivery size: artifact bytes',
   },
+  'size.android.benchmark_payload_compressed/zip-central-directory/1': {
+    metricId: 'size.android.benchmark_payload_compressed', platform: 'android', unit: 'bytes', unitOfObservation: 'build',
+    procedure: 'sum of compressed member sizes classified as benchmark-payload or benchmark-data in the installed APK central directory',
+    resolution: '1 byte', clock: 'n/a', designRef: 'payload accounting: compressed ZIP members',
+  },
+  'size.android.benchmark_payload_uncompressed/zip-central-directory/1': {
+    metricId: 'size.android.benchmark_payload_uncompressed', platform: 'android', unit: 'bytes', unitOfObservation: 'build',
+    procedure: 'sum of uncompressed member sizes classified as benchmark-payload or benchmark-data in the installed APK central directory',
+    resolution: '1 byte', clock: 'n/a', designRef: 'payload accounting: uncompressed ZIP members',
+  },
   'size.ios.simulator_app/app-dir-file-bytes/1': {
     metricId: 'size.ios.simulator_app', platform: 'ios', unit: 'bytes', unitOfObservation: 'build',
     procedure: 'sum of regular-file byte lengths below the frozen simulator .app directory (symlinks not followed); descriptive',

@@ -58,6 +58,7 @@
       "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
       "persistence": "@react-native-async-storage/async-storage",
       "artifacts": { "apk": "build/android/app-arm64-release.apk", "remote": "build/remote/android/<version>/" },
+      "benchmarkPayloadAccounting": { "status": "unavailable", "reason": "fixture and replay objects are bundled into the Hermes application bundle" },
       "sizeClassification": [
         { "glob": "lib/*/libhermes*.so", "category": "runtime-engine" },
         { "glob": "lib/*/lib*.so", "category": "framework" },

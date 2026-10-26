@@ -29,6 +29,7 @@ import * as android from './lib/android.mjs';
 import * as ios from './lib/ios.mjs';
 import { verifyAcceptanceReceipt } from '../acceptance/lib.mjs';
 import { androidArtifactBuildProblems, declaredBuildProblems, loadBuildPolicy } from './lib/build-policy.mjs';
+import { benchmarkPayloadTotals, classifyZip } from './lib/zip-size.mjs';
 
 export const TOOL_VERSION = '0.2.0';
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -766,6 +767,24 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
         methodId, status: 'measured', value: x.bytes, rawRefs: [{ file: sizeFile, line: i + 1, text: sizeLines[i] }],
       }));
     });
+    const payloadMethods = [
+      ['size.android.benchmark_payload_compressed/zip-central-directory/1', 'compressedBytes'],
+      ['size.android.benchmark_payload_uncompressed/zip-central-directory/1', 'uncompressedBytes'],
+    ];
+    if (c.benchmarkPayloadAccounting.status === 'unavailable') {
+      for (const [methodId] of payloadMethods) {
+        allObs.push(makeObservation(sizeBase, { methodId, status: 'unavailable', reason: c.benchmarkPayloadAccounting.reason }));
+      }
+    } else {
+      const payload = benchmarkPayloadTotals(classifyZip(f.absFrozen, c.sizeClassification));
+      const payloadLine = `benchmark payload ${payload.entries} entries compressed ${payload.compressedBytes} bytes uncompressed ${payload.uncompressedBytes} bytes`;
+      const payloadFile = write(`${base}/payload-sizes.txt`, `${payloadLine}\n`).file;
+      for (const [methodId, field] of payloadMethods) {
+        allObs.push(makeObservation(sizeBase, payload.entries === 0
+          ? { methodId, status: 'unavailable', reason: 'benchmark-payload-classification-matched-no-entries' }
+          : { methodId, status: 'measured', value: payload[field], rawRefs: [{ file: payloadFile, line: 1, text: payloadLine }] }));
+      }
+    }
     if (!builds[c.id].frozen.some((x) => x.kind === 'aab')) {
       allObs.push(makeObservation(sizeBase, { methodId: 'size.android.aab/file-bytes/1', status: 'not-measured', reason: 'artifact-not-provided' }));
     }

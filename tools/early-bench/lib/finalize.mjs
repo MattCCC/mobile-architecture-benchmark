@@ -218,6 +218,20 @@ export function finalizeAndroidSession({ sdir, repo, avd = 'mobilebench_api37', 
     if (!sizes.some((x) => x.m[1] === 'aab')) {
       allObs.push(makeObservation({ ...sizeBase, build: { buildId, artifactSha256: apk.m[3], buildClass } }, { methodId: 'size.android.aab/file-bytes/1', status: 'not-measured', reason: 'artifact-not-provided' }));
     }
+    const payloadText = readText(join(sdirC, 'payload-sizes.txt')) ?? '';
+    const payload = /benchmark payload (\d+) entries compressed (\d+) bytes uncompressed (\d+) bytes/.exec(payloadText);
+    for (const [methodId, index] of [
+      ['size.android.benchmark_payload_compressed/zip-central-directory/1', 2],
+      ['size.android.benchmark_payload_uncompressed/zip-central-directory/1', 3],
+    ]) {
+      const fields = rc.benchmarkPayloadAccounting.status === 'unavailable'
+        ? { methodId, status: 'unavailable', reason: rc.benchmarkPayloadAccounting.reason }
+        : payload && Number(payload[1]) > 0
+          ? { methodId, status: 'measured', value: Number(payload[index]),
+            rawRefs: [{ file: `raw/setup/${id}/payload-sizes.txt`, line: 1, text: payload[0] }] }
+          : { methodId, status: 'unavailable', reason: 'benchmark-payload-accounting-not-recorded-before-interruption' };
+      allObs.push(makeObservation({ ...sizeBase, build: { buildId, artifactSha256: apk.m[3], buildClass } }, fields));
+    }
   }
 
   // ---- journeys ----
