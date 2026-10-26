@@ -3,3 +3,5 @@
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 // Benchmark: one deployment target for every candidate (design §13.2).
 IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+// Benchmark build policy: arm64 only (the runtime's own setting keeps x86_64 for simulator builds on Apple silicon).
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = i386 armv6 armv7 armv7s armv8 x86_64;
