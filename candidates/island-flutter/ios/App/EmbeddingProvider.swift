@@ -29,6 +29,9 @@ private final class FlutterIslandEmbedding: IslandEmbedding {
     private func start() {
         guard engine == nil else { return }
         let created = FlutterEngine(name: "mobilebench-islands", project: nil, allowHeadlessExecution: true)
+        // The engine must run before a channel handler is set (FlutterEngine raises otherwise). The Dart side
+        // announces runtimeReady only after its own handler is registered, so no message is lost.
+        _ = created.run()
         let bridge = FlutterMethodChannel(name: "org.example.mobilebench/islands", binaryMessenger: created.binaryMessenger)
         bridge.setMethodCallHandler { [weak self] call, result in
             guard call.method == "islandMessage", let message = call.arguments as? String else {
@@ -44,7 +47,6 @@ private final class FlutterIslandEmbedding: IslandEmbedding {
             }
             result(nil)
         }
-        _ = created.run()
         engine = created
         channel = bridge
     }
