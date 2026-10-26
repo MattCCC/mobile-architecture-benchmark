@@ -1,0 +1,106 @@
+{
+  "schema": "mobilebench.candidate/1.0.0",
+  "id": "island-flutter",
+  "displayName": "Native shell with Flutter UI islands",
+  "role": "candidate",
+  "variantOf": null,
+  "family": "island",
+  "architectureClass": "native-shell-cross-platform-ui-islands",
+  "owner": "island-flutter",
+  "status": { "android": "implemented", "ios": "implemented-debug-simulator" },
+  "statusNote": "The native shell owns List, Selection, navigation, state, persistence and stream processing. One Flutter engine renders Detail and Insights. Flutter supports Android release add-to-app; its iOS simulator artifact is debug-only and is reported as island-flutter@debug.",
+  "host": {
+    "path": "candidates/_island-host",
+    "sha256": "48200e07f554937285d80eaa2670952bdb42dc14973132f3fdab7a2b57e7272d"
+  },
+  "sharedBuildInputs": [
+    "candidates/_island-host"
+  ],
+  "platforms": {
+    "android": {
+      "applicationId": "org.example.mobilebench.islandflutter",
+      "launchActivity": "org.example.mobilebench.islandflutter/org.example.mobilebench.islandhost.MainActivity",
+      "contentSurface": "native-activity-with-flutter-islands",
+      "uiToolkit": "Jetpack Compose shell; Flutter Detail and Insights islands",
+      "runtime": "ART native shell plus one lazy or prewarmed Flutter engine and Dart isolate",
+      "listPrimitive": "native LazyColumn",
+      "navigation": "native Navigation Compose NavHost",
+      "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
+      "streamSource": "replay",
+      "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
+      "instrumentationId": "island-host-flutter-channel-interim/1",
+      "buildClass": "release",
+      "artifacts": { "apk": "android/app/build/outputs/apk/release/app-release.apk" },
+      "sizeClassification": [
+        { "glob": "lib/*/libflutter.so", "category": "framework" },
+        { "glob": "assets/flutter_assets/**", "category": "app-code" },
+        { "glob": "assets/fixtures/*", "category": "benchmark-payload" },
+        { "glob": "**", "category": "other" }
+      ]
+    },
+    "ios": {
+      "bundleId": "org.example.mobilebench.islandflutter",
+      "contentSurface": "native-uikit-shell-with-flutter-islands",
+      "uiToolkit": "UIKit shell; Flutter Detail and Insights islands",
+      "runtime": "Swift native shell plus one lazy or prewarmed Flutter engine and Dart isolate",
+      "listPrimitive": "native UITableView",
+      "navigation": "native UINavigationController",
+      "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
+      "streamSource": "replay",
+      "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "debug" },
+      "instrumentationId": "island-host-flutter-channel-interim/1",
+      "buildClass": { "simulator": "debug", "device": "release" },
+      "artifacts": { "simulatorApp": "build/ios/Build/Products/Debug-iphonesimulator/MBIslandFlutter.app" },
+      "sizeClassification": [
+        { "glob": "Frameworks/Flutter.framework/**", "category": "framework" },
+        { "glob": "Frameworks/App.framework/**", "category": "app-code" },
+        { "glob": "fixtures/*", "category": "benchmark-payload" },
+        { "glob": "**", "category": "other" }
+      ]
+    }
+  },
+  "versions": {
+    "flutter": "3.47.7",
+    "dart": "3.13.5",
+    "gradle": "9.3.1",
+    "androidGradlePlugin": "9.1.0",
+    "kotlin": "2.4.0",
+    "xcode": "27.1 (27A9275)",
+    "swiftLanguageMode": "6"
+  },
+  "toolchains": ["flutter", "dart", "jdk17", "android-sdk", "xcode", "cocoapods", "ios-sim-runtime"],
+  "remoteLoading": {
+    "R1": { "status": "applicable", "note": "The Insights island is embedded in the installed artifact." },
+    "R2": { "status": "not-applicable", "reason": "This candidate packages an embedded Flutter module; independently delivered Dart code is not implemented." },
+    "R3": { "status": "not-applicable", "reason": "as R2" },
+    "R4": { "status": "not-applicable", "reason": "as R2" },
+    "R5": { "status": "not-applicable", "reason": "as R2" },
+    "R6": { "status": "not-applicable", "reason": "as R2" },
+    "R9": { "status": "not-applicable", "reason": "as R2" }
+  },
+  "bridge": {
+    "sync": { "status": "not-applicable", "reason": "The production host-island transport is Flutter MethodChannel and asynchronous." },
+    "async": { "status": "applicable", "note": "Host state snapshots, updates, markers and draw probes cross one JSON MethodChannel; the bridge micro-benchmark is not implemented." }
+  },
+  "crossRuntime": {
+    "applicable": true,
+    "boundary": "native host owns data and navigation; Flutter renders Detail and Insights from versioned JSON messages"
+  },
+  "deviations": [
+    {
+      "id": "benchkit-candidate-local",
+      "description": "The native host marker core and Flutter MethodChannel forwarder are candidate-local interim instrumentation.",
+      "impact": "Results remain descriptive until the shared calibrated BenchKit and overhead experiment exist."
+    },
+    {
+      "id": "stream-source-replay",
+      "description": "The native host replays the same golden-verified bundled stream on the absolute monotonic schedule.",
+      "impact": "It compares only inside replay transport cells and is never pooled with server transport."
+    },
+    {
+      "id": "ios-debug-simulator",
+      "description": "Flutter does not emit release-mode iOS simulator frameworks; the simulator candidate is explicitly island-flutter@debug.",
+      "impact": "It is kept separate from release comparison cells."
+    }
+  ]
+}

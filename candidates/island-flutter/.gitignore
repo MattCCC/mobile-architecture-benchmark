@@ -1,0 +1,7 @@
+/build/
+/android/.gradle/
+/android/app/build/
+/ios/MBIslandFlutter.xcodeproj/
+/ios/MBIslandFlutter.xcworkspace/
+/ios/Pods/
+/ios/.xcode.env.local

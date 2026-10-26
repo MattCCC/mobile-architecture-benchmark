@@ -1,0 +1,92 @@
+import java.util.Properties
+
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+def candidateDir = rootDir.parentFile.canonicalFile
+def repoRoot = new File(candidateDir, '../..').canonicalFile
+def sharedHost = new File(repoRoot, 'candidates/_island-host')
+def generatedAssets = new File(sharedHost, 'generated/assets')
+def keystoreProperties = [
+    new File(repoRoot, 'out/keys/keystore.properties'),
+    new File(sharedHost, 'android/.keys/keystore.properties'),
+].find { it.isFile() }
+
+android {
+    namespace 'org.example.mobilebench.islandhost'
+    compileSdk 37
+
+    defaultConfig {
+        applicationId 'org.example.mobilebench.islandflutter'
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+        ndk { abiFilters 'arm64-v8a' }
+    }
+
+    signingConfigs {
+        if (keystoreProperties != null) {
+            mbLocal {
+                def props = new Properties()
+                keystoreProperties.withInputStream { props.load(it) }
+                storeFile new File(keystoreProperties.parentFile, props.getProperty('storeFile'))
+                storePassword props.getProperty('storePassword')
+                keyAlias props.getProperty('keyAlias')
+                keyPassword props.getProperty('keyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), new File(sharedHost, 'android/proguard-rules.pro')
+            if (keystoreProperties != null) signingConfig signingConfigs.mbLocal
+        }
+    }
+
+    buildFeatures { compose true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    sourceSets {
+        main {
+            manifest.srcFile new File(sharedHost, 'android/src/main/AndroidManifest.xml')
+            java.srcDirs new File(sharedHost, 'android/src/main/java'), 'src/main/java'
+            res.srcDirs new File(sharedHost, 'android/src/main/res'), 'src/main/res'
+            assets.srcDir generatedAssets
+        }
+        test.java.srcDir new File(sharedHost, 'android/src/test/java')
+    }
+    lint {
+        abortOnError true
+        checkReleaseBuilds true
+        disable 'MissingApplicationIcon', 'ChromeOsAbiSupport'
+    }
+    testOptions {
+        unitTests.all {
+            systemProperty 'mb.assetsDir', new File(sharedHost, 'generated/assets/fixtures').path
+            systemProperty 'mb.goldenFile', new File(repoRoot, 'fixtures/v1/golden.json').path
+        }
+    }
+}
+
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+
+dependencies {
+    implementation project(':flutter')
+    implementation platform('androidx.compose:compose-bom:2026.09.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation 'androidx.navigation:navigation-compose:2.10.2'
+    implementation 'androidx.profileinstaller:profileinstaller:1.4.1'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20260814'
+}

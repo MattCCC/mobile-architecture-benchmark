@@ -24,6 +24,7 @@ architecture, not from the app doing different work.
 | `repack` | React Native with Re.Pack and remote modules | runnable |
 | `nativescript` | NativeScript | runnable |
 | `island-rn` | Native shell with React Native Detail and Insights islands | runnable |
+| `island-flutter` | Native shell with Flutter Detail and Insights islands | runnable (iOS simulator: debug) |
 
 `island-rn` is a brownfield setup: native List and Selection screens, with Detail and Insights as React Native
 islands sharing one runtime. The native host owns data, streaming, navigation, restoration and state; the RN code
