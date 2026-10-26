@@ -60,6 +60,19 @@ export function buildInputs(cj, dir) {
   return { dirs, shared: [...new Set(shared.map(withSlash))].sort(), basis };
 }
 
+// iOS simulator build class of candidate.json platforms.ios (p): declared per candidate, else the Xcode products
+// directory of the artifact path (`Build/Products/<Configuration>-iphonesimulator/`); the bundle itself carries no
+// reliable marker.
+export function iosSimulatorBuildClass(p) {
+  const app = p?.artifacts?.simulatorApp ?? p?.artifacts?.app ?? null;
+  const explicit = typeof p?.buildClass === 'string' ? p.buildClass : (p?.buildClass?.simulator ?? p?.benchmarkBuild?.buildClass ?? null);
+  const fromPath = /(?:^|\/)Release-iphonesimulator\//.test(String(app ?? '')) ? 'release' : (/(?:^|\/)Debug-iphonesimulator\//.test(String(app ?? '')) ? 'debug' : null);
+  return {
+    declared: explicit ?? fromPath,
+    buildClassSource: explicit ? 'candidate.json buildClass' : (fromPath ? 'artifact path (Xcode <Configuration>-iphonesimulator products directory)' : null),
+  };
+}
+
 // Returns { id, ok, status?, reason?, ... }. Never throws for a missing candidate: the caller records it.
 export function resolveCandidate({ repo, id, platform, overrides = {} }) {
   const parsed = parseCandidateId(id);
@@ -142,12 +155,7 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
   if (!bundleId) {
     return { ...base, ok: false, status: 'not-measured', reason: 'bundle-id-missing' };
   }
-  // iOS simulator build class: declared per candidate, else the Xcode products directory of the artifact path
-  // (`Build/Products/<Configuration>-iphonesimulator/`); the bundle itself carries no reliable marker.
-  const explicit = typeof p.buildClass === 'string' ? p.buildClass : (p.buildClass?.simulator ?? p.benchmarkBuild?.buildClass ?? null);
-  const fromPath = /(?:^|\/)Release-iphonesimulator\//.test(String(app ?? '')) ? 'release' : (/(?:^|\/)Debug-iphonesimulator\//.test(String(app ?? '')) ? 'debug' : null);
-  const declared = explicit ?? fromPath;
-  const buildClassSource = explicit ? 'candidate.json buildClass' : (fromPath ? 'artifact path (Xcode <Configuration>-iphonesimulator products directory)' : null);
+  const { declared, buildClassSource } = iosSimulatorBuildClass(p);
   if (!declared) {
     return { ...base, ok: false, status: 'not-measured', reason: 'build-class-undeclared', bundleId };
   }

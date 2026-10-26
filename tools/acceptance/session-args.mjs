@@ -8,7 +8,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { run } from '../early-bench/lib/exec.mjs';
-import { hashArtifact } from '../early-bench/lib/candidates.mjs';
+import { hashArtifact, iosSimulatorBuildClass } from '../early-bench/lib/candidates.mjs';
 import { sha256File } from '../early-bench/lib/hash.mjs';
 import { verifyAcceptanceReceipt } from './lib.mjs';
 
@@ -41,7 +41,7 @@ for (const id of readdirSync(join(repo, 'candidates')).filter((d) => !d.startsWi
     process.stderr.write(`skipped ${id}:${args.platform}: ${problems.join('; ')}\n`);
     continue;
   }
-  const debug = args.platform === 'ios' && platform.benchmarkBuild?.buildClass === 'debug';
+  const debug = args.platform === 'ios' && iosSimulatorBuildClass(platform).declared === 'debug';
   const runId = debug ? `${id}@debug` : id;
   ids.push(runId);
   out.push(`--acceptance-receipt ${runId}:${args.platform}=${relative(process.cwd(), receipt)}`);

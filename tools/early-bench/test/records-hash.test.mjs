@@ -10,7 +10,15 @@ import {
 } from '../lib/hash.mjs';
 import { LABELS, METHODS, SCENARIOS } from '../lib/methods.mjs';
 import { makeRedactor } from '../lib/exec.mjs';
-import { buildInputs } from '../lib/candidates.mjs';
+import { buildInputs, iosSimulatorBuildClass } from '../lib/candidates.mjs';
+
+test('iosSimulatorBuildClass: buildClass string/object, benchmarkBuild, artifact path', () => {
+  assert.equal(iosSimulatorBuildClass({ buildClass: 'debug' }).declared, 'debug');
+  assert.equal(iosSimulatorBuildClass({ buildClass: { simulator: 'debug' } }).declared, 'debug');
+  assert.equal(iosSimulatorBuildClass({ benchmarkBuild: { buildClass: 'debug' } }).declared, 'debug');
+  assert.equal(iosSimulatorBuildClass({ artifacts: { simulatorApp: 'b/Build/Products/Debug-iphonesimulator/A.app' } }).declared, 'debug');
+  assert.equal(iosSimulatorBuildClass({}).declared, null);
+});
 
 const base = {
   sessionId: 's-1', runId: 'r', journeyId: 'j', journeyIndex: 1, candidateId: 'native', platform: 'android',
