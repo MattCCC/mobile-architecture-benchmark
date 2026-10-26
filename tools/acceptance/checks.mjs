@@ -134,11 +134,30 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
     return { l: Math.max(list.bounds.l, w.l), t: Math.max(list.bounds.t, w.t), r: Math.min(list.bounds.r, w.r), b: Math.min(list.bounds.b, w.b) };
   };
 
-  /** Rows on screen: inside the list's on-screen bounds (iOS snapshots also contain off-screen cells). */
+  /** Rows on screen, identified by their labels inside the list's on-screen bounds (iOS snapshots also contain
+   * off-screen and not-yet-created cells, the latter as label-less placeholders). */
   const rowIndices = (ui) => {
     const list = listBounds(ui);
-    const visible = (n) => !list || (n.bounds.b > list.t + 1 && n.bounds.t < list.b - 1);
-    return ui.nodes.filter((n) => /^mb\.row\.\d+$/.test(n.id) && visible(n)).map((n) => Number(n.id.split('.')[2]));
+    const visible = (n) => !list || (n.bounds.b > list.t + 1 && n.bounds.t < list.b - 1 && n.bounds.b > n.bounds.t);
+    return ui.nodes.filter((n) => /^mb\.row\.\d+\.label$/.test(n.id) && visible(n)).map((n) => Number(n.id.split('.')[2]));
+  };
+
+  /** Row slots: the row elements when the toolkit exposes them, else derived from the label pitch (rows are
+   * contiguous with a fixed extent, so each row starts where its label starts minus the first label's offset). */
+  const rowSlots = (ui, list) => {
+    const labels = rowIndices(ui).map((i) => ({ i, label: ui.find(`mb.row.${i}.label`) })).sort((a, b) => a.label.bounds.t - b.label.bounds.t);
+    const rows = labels.map(({ i, label }) => {
+      const row = ui.find(`mb.row.${i}`);
+      const contains = row && row.bounds.t <= label.bounds.t && row.bounds.b >= label.bounds.b;
+      return { i, bounds: contains ? row.bounds : null, label };
+    });
+    if (rows.every((r) => r.bounds)) return rows;
+    const offset = rows[0].label.bounds.t - list.t;
+    const pitch = rows.length > 1 ? rows[1].label.bounds.t - rows[0].label.bounds.t : device.rowExtent;
+    return rows.map((r) => {
+      const t = r.label.bounds.t - offset;
+      return { ...r, bounds: { l: list.l, r: list.r, t, b: t + pitch }, derived: true };
+    });
   };
 
   /** Visible rows: labels exact; option state exact; values and total consistent with the stream window. */
@@ -212,7 +231,7 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
     need(ui.find('mb.list'), 'mb.list');
     const list = { bounds: listBounds(ui) };
     const extent = device.rowExtent;
-    const rows = ui.nodes.filter((n) => /^mb\.row\.\d+$/.test(n.id));
+    const rows = rowSlots(ui, list.bounds).map((r) => ({ id: `mb.row.${r.i}`, bounds: r.bounds }));
     // Dumped bounds may be clipped to the viewport: a row touching a list edge may be partly visible.
     const inside = (n) => n.bounds.t >= list.bounds.t - 1 && n.bounds.b <= list.bounds.b + 1;
     const atEdge = (n) => Math.abs(n.bounds.t - list.bounds.t) <= 1 || Math.abs(n.bounds.b - list.bounds.b) <= 1;

@@ -19,6 +19,8 @@ const { values: args } = parseArgs({ options: {
   repo: { type: 'string', default: '.' }, candidate: { type: 'string' }, app: { type: 'string' },
   udid: { type: 'string' }, 'sim-name': { type: 'string', default: 'mobilebench-iphone' },
   profile: { type: 'string', default: 'small' }, out: { type: 'string' },
+  // Debugging: launch, then tap each listed element id in turn, writing snapshot-<n>.json after every step.
+  inspect: { type: 'string' },
 }, strict: true });
 if (!args.candidate) {
   process.stderr.write('usage: ios.mjs --candidate <id> [--app <path.app>] [--udid <id>] [--profile small] [--out <dir>]\n');
@@ -177,7 +179,9 @@ const device = {
   dump,
   tap,
   async back(ui) {
-    const b = ui?.find('mb.nav.back') ?? ui?.nodes.find((n) => n.text.split('\n')[0] === 'Back' && n.bounds.t < 200);
+    // The candidate's own back control, else UIKit's navigation-bar back button (identifier BackButton; its title
+    // varies, e.g. React Navigation shows the previous route's name).
+    const b = ui?.find('mb.nav.back') ?? ui?.find('BackButton') ?? ui?.nodes.find((n) => n.text.split('\n')[0] === 'Back' && n.bounds.t < 200);
     if (b) await tap(b);
   },
   // Markers carry the host uptime clock; elapsed time is taken from when the marker reached the driver, plus 1 s for
@@ -214,6 +218,24 @@ try {
   await simctl(['bootstatus', udid, '-b'], { timeoutMs: 300000 });
   startMarkers(udid);
   await startServer(udid);
+  if (args.inspect !== undefined) {
+    await install();
+    await device.launch('inspect', { 'mb.journeyMode': '1', 'mb.profile': args.profile, 'mb.markerMirror': 'all' });
+    const steps = ['', ...args.inspect.split(',').filter(Boolean)];
+    for (const [n, id] of steps.entries()) {
+      if (id) {
+        const ui = await dump();
+        const node = ui.find(id) ?? ui.nodes.find((x) => x.text.split('\n')[0] === id);
+        if (!node) throw new Error(`inspect: ${id} not found`);
+        await tap(node);
+      }
+      await sleep(3000);
+      const ui = await dump();
+      writeFileSync(join(out, `snapshot-${n}.json`), JSON.stringify(ui.nodes.map(({ all, ...x }) => ({ ...x, children: all.length })), null, 1));
+    }
+    await device.close();
+    process.exit(0);
+  }
   const passed = await runAcceptance({ repo, candidateId: args.candidate, profile: args.profile, out, artifactPath: app,
     driverFiles: ['ios.mjs', 'checks.mjs', 'model.mjs', 'ios-driver/UITests/CommandServer.swift'].map((f) => join(here, f)), device });
   process.exitCode = passed ? 0 : 1;
