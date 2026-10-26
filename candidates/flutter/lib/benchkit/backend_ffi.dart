@@ -106,6 +106,9 @@ class AndroidMarkerBackend implements MarkerBackend {
     // Posted to the platform thread; Activity.reportFullyDrawn() runs there.
     unawaited(_channel.invokeMethod<void>('fullyDrawn').catchError((Object _) {}));
   }
+
+  @override
+  String? nativePayload(String event) => null;
 }
 
 typedef _NsecNpC = Uint64 Function(Int32);
@@ -114,6 +117,8 @@ typedef _SyslogC = Void Function(Int32, Pointer<Utf8>, VarArgs<(Pointer<Utf8>,)>
 typedef _SyslogDart = void Function(int, Pointer<Utf8>, Pointer<Utf8>);
 typedef _NotifyPostC = Uint32 Function(Pointer<Utf8>);
 typedef _NotifyPostDart = int Function(Pointer<Utf8>);
+typedef _PayloadC = Int32 Function(Pointer<Utf8>, Pointer<Utf8>, Int32);
+typedef _PayloadDart = int Function(Pointer<Utf8>, Pointer<Utf8>, int);
 
 /// iOS: markers go to a pre-allocated in-memory ring buffer (4096 entries) on
 /// `clock_gettime_nsec_np(CLOCK_UPTIME_RAW)`, flushed to
@@ -126,7 +131,13 @@ class IosMarkerBackend implements MarkerBackend {
     _clock = p.lookupFunction<_NsecNpC, _NsecNpDart>('clock_gettime_nsec_np');
     _syslog = p.lookupFunction<_SyslogC, _SyslogDart>('syslog');
     _notifyPost = p.lookupFunction<_NotifyPostC, _NotifyPostDart>('notify_post');
+    _markerPayload = p.providesSymbol('mb_marker_payload')
+        ? p.lookupFunction<_PayloadC, _PayloadDart>('mb_marker_payload')
+        : null;
   }
+
+  late final _PayloadDart? _markerPayload;
+  final Pointer<Uint8> _payload = calloc<Uint8>(128);
 
   static const int _clockUptimeRaw = 8;
   static const int _logNotice = 5;
@@ -182,6 +193,13 @@ class IosMarkerBackend implements MarkerBackend {
 
   @override
   void fullyDrawn() {}
+
+  /// `mb_marker_payload` (ios/Runner/MarkerPayload.swift): writes the payload into [_payload], 0 when unavailable.
+  @override
+  String? nativePayload(String event) {
+    final n = _markerPayload?.call(_name.set(event), _payload.cast(), 128) ?? 0;
+    return n > 0 ? _payload.cast<Utf8>().toDartString(length: n) : null;
+  }
 }
 
 typedef _ArgcC = Pointer<Int32> Function();

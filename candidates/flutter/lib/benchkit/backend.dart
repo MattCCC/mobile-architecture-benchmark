@@ -32,6 +32,9 @@ abstract interface class MarkerBackend {
 
   /// Platform "fully drawn" signal (Android `Activity.reportFullyDrawn()`); no-op elsewhere.
   void fullyDrawn();
+
+  /// iOS payload of the native-sourced markers `proc.anchor` (`ws=;ps=`) and `mem` (`fp=;pk=`); null elsewhere.
+  String? nativePayload(String event);
 }
 
 /// Host backend: keeps every marker in memory. The clock is injectable for tests.
@@ -72,6 +75,9 @@ class MemoryMarkerBackend implements MarkerBackend {
   @override
   void fullyDrawn() => fullyDrawnCalls++;
 
+  @override
+  String? nativePayload(String event) => null;
+
   /// Records of one event, in emission order.
   List<MarkerRecord> of(String event) => records.where((r) => r.event == event).toList();
 }
@@ -97,4 +103,7 @@ class NoopMarkerBackend implements MarkerBackend {
 
   @override
   void fullyDrawn() {}
+
+  @override
+  String? nativePayload(String event) => null;
 }

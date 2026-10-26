@@ -283,6 +283,10 @@ class BenchKit {
       'ctr',
       'r=${counters.received};a=${counters.applied};dup=${counters.duplicates};gap=${counters.gaps};rows=$rowBuilds',
     );
+    final mem = enabled ? backend.nativePayload('mem') : null;
+    if (mem != null) {
+      mark('mem', mem);
+    }
     stateDigestText.value = 'k=$k;seq=$seq;d=${digest.substring(0, 12)}';
     flush();
   }

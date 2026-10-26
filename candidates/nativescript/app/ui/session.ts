@@ -168,6 +168,10 @@ export class Session implements StoreListener, StreamEvents {
     if (native.platformName === 'android') {
       this.bench.mark('launch', `ss=${this.savedStatePassed ? 1 : 0}`);
     }
+    const anchor = native.anchorPayload();
+    if (anchor) {
+      this.bench.mark('proc.anchor', anchor);
+    }
     this.bench.mark('a11y', native.a11yPayload());
     native.watchA11y((payload) => this.bench.mark('a11y', payload));
     native.watchLifecycle(
@@ -467,6 +471,10 @@ export class Session implements StoreListener, StreamEvents {
     const c = this.store.counters;
     this.bench.mark('state', `k=${k};s=${seq};d=${digest.slice(0, 16)}`);
     this.bench.mark('ctr', `r=${c.received};a=${c.applied};dup=${c.dup};gap=${c.gap};rows=${c.rows}`);
+    const mem = native.memPayload();
+    if (mem) {
+      this.bench.mark('mem', mem);
+    }
     if (this.list) {
       this.list.digestLabel.text = `k=${k};seq=${seq};d=${digest.slice(0, 12)}`;
     }

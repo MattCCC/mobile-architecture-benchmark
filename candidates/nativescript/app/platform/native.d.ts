@@ -52,6 +52,12 @@ export function configureListView(listView: ListView): void;
 /** Assistive-technology state payload for the `a11y` marker. */
 export function a11yPayload(): string;
 
+/** iOS `proc.anchor` payload `ws=<wall µs>;ps=<process start wall µs>`; Android: null (startup comes from am start). */
+export function anchorPayload(): string | null;
+
+/** iOS `mem` payload `fp=<phys_footprint>;pk=<peak>` (task_vm_info); Android: null (dumpsys meminfo). */
+export function memPayload(): string | null;
+
 /** Android: calls back with a new payload on every accessibility state change. iOS: no-op. */
 export function watchA11y(onChange: (payload: string) => void): void;
 

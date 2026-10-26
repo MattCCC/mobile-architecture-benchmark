@@ -37,6 +37,10 @@ Future<void> main(List<String> args) async {
     mirrorAll: config.mirrorAll,
     enabled: !kBenchKitNoop,
   );
+  final anchor = bench.backend.nativePayload('proc.anchor');
+  if (anchor != null) {
+    bench.mark('proc.anchor', anchor);
+  }
   if (config.semanticsOn) {
     semanticsHandle = SemanticsBinding.instance.ensureSemantics();
   }

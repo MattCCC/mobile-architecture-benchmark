@@ -23,7 +23,16 @@ export function traceMarker(_sectionName: string): void {
 const stderrHandle = NSFileHandle.fileHandleWithStandardError;
 
 /** App_Resources/iOS/src/MBLog.m: os_log into the unified log, where the runner reads the control lines. */
-declare const MBLog: { line(line: string): void };
+declare const MBLog: { line(line: string): void; anchorPayload(): string; memPayload(): string | null };
+
+export function anchorPayload(): string | null {
+  return String(MBLog.anchorPayload());
+}
+
+export function memPayload(): string | null {
+  const p = MBLog.memPayload();
+  return p ? String(p) : null;
+}
 
 export function logLine(line: string): void {
   MBLog.line(line);

@@ -4,4 +4,8 @@
 
 @interface MBLog : NSObject
 + (void)line:(NSString *)line;
+/// `ws=<wall µs>;ps=<process start wall µs>` for the `proc.anchor` marker.
++ (NSString *)anchorPayload;
+/// `fp=<phys_footprint>;pk=<ledger_phys_footprint_peak>` for the `mem` marker, nil when task_info fails.
++ (nullable NSString *)memPayload;
 @end

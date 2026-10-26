@@ -229,6 +229,14 @@ function accessibilityManager(): android.view.accessibility.AccessibilityManager
     .getSystemService(android.content.Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager;
 }
 
+export function anchorPayload(): string | null {
+  return null;
+}
+
+export function memPayload(): string | null {
+  return null;
+}
+
 export function a11yPayload(): string {
   return `on=${accessibilityManager().isEnabled() ? 1 : 0}`;
 }
