@@ -13,5 +13,8 @@
     "restore",
     "insights",
     "error-behavior"
-  ]
+  ],
+  "descriptiveWaivable": {
+    "instrumentation-overhead": "design §6.7: without the A/B overhead experiment a result is descriptive, not inadmissible; a waived receipt admits early (descriptive) sessions only and makes every result set that uses it ineligible"
+  }
 }

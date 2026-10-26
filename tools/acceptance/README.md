@@ -28,5 +28,10 @@ Receipt shape:
 ```
 
 `checks` must contain every id in `contract.json`. A missing or failed check, changed evidence file, mismatched artifact
-or mismatched design rejects the candidate. Receipts and evidence belong under ignored local results until a complete
+or mismatched design rejects the candidate.
+
+A check listed in the contract's `descriptiveWaivable` may instead carry `"status": "waived"` with a non-empty
+`reason`. Today that is only `instrumentation-overhead`: design §6.7 makes a result without the A/B overhead
+experiment descriptive, not inadmissible. A waived receipt admits the build to early (descriptive) sessions; the
+session manifest records the waiver and the eligibility audit rejects every result set that contains one. Receipts and evidence belong under ignored local results until a complete
 result set is deliberately published.

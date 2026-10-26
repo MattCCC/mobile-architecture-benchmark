@@ -23,9 +23,15 @@ export function verifyAcceptanceReceipt(path, expected) {
     if (receipt[key] !== expected[key]) problems.push(`${key} mismatch`);
   }
   const checks = new Map((receipt.checks ?? []).map((c) => [c.id, c]));
+  const waivable = CONTRACT.descriptiveWaivable ?? {};
+  const waived = [];
   for (const id of CONTRACT.requiredChecks) {
     const check = checks.get(id);
-    if (!check || check.status !== 'passed') problems.push(`required check not passed: ${id}`);
+    if (check?.status === 'waived' && Object.hasOwn(waivable, id) && typeof check.reason === 'string' && check.reason.trim()) {
+      waived.push(id);
+    } else if (!check || check.status !== 'passed') {
+      problems.push(`required check not passed: ${id}`);
+    }
   }
   if (!Array.isArray(receipt.evidence) || receipt.evidence.length === 0) {
     problems.push('evidence must contain at least one content-hashed file');
@@ -40,5 +46,6 @@ export function verifyAcceptanceReceipt(path, expected) {
       else if (sha256File(evidencePath) !== item.sha256) problems.push(`evidence hash mismatch: ${item.path}`);
     }
   }
-  return { ok: problems.length === 0, problems, receipt, sha256: sha256(bytes) };
+  // `waived` checks admit the build to descriptive (early) sessions only; the eligibility audit rejects them.
+  return { ok: problems.length === 0, problems, receipt, sha256: sha256(bytes), waived };
 }

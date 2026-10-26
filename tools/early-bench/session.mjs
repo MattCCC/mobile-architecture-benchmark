@@ -312,7 +312,7 @@ async function main() {
       continue;
     }
     usable.push({ ...c, primarySha256: h.sha256,
-      acceptance: { sha256: acceptance.sha256, suiteId: acceptance.receipt.suiteId },
+      acceptance: { sha256: acceptance.sha256, suiteId: acceptance.receipt.suiteId, waived: acceptance.waived },
       verified: expected ? { text: expected.text, form: expected.form, matched: true } : null });
   }
   const est = estimate(o.platform, o);

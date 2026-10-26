@@ -30,4 +30,7 @@ test('result eligibility rejects early virtual-device sessions and accepts compl
     candidates: [{ id: 'a', status: 'included', buildClass: 'release' }, { id: 'b', status: 'included', buildClass: 'release' }],
     verification: { acceptanceReceipts: { a: { sha256: '1' }, b: { sha256: '2' } } } };
   assert.equal(auditResultSet(physical, policy).eligible, true);
+  const waived = { ...physical, verification: { acceptanceReceipts: {
+    a: { sha256: '1', waived: ['instrumentation-overhead'] }, b: { sha256: '2', waived: [] } } } };
+  assert.deepEqual(auditResultSet(waived, policy).reasons, ['a:acceptance-check-waived:instrumentation-overhead']);
 });

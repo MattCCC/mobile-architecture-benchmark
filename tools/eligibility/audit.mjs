@@ -39,7 +39,9 @@ export function auditResultSet(manifest, policy) {
   if (included.length < 2) reasons.push('fewer-than-two-included-candidates');
   for (const candidate of included) {
     if (candidate.buildClass !== policy.eligibleBuildClass) reasons.push(`${candidate.id}:non-release-build`);
-    if (!manifest.verification?.acceptanceReceipts?.[candidate.id]?.sha256) reasons.push(`${candidate.id}:acceptance-receipt-missing`);
+    const receipt = manifest.verification?.acceptanceReceipts?.[candidate.id];
+    if (!receipt?.sha256) reasons.push(`${candidate.id}:acceptance-receipt-missing`);
+    for (const id of receipt?.waived ?? []) reasons.push(`${candidate.id}:acceptance-check-waived:${id}`);
   }
   return { eligible: reasons.length === 0, resultSetKind: kind, reasons };
 }
