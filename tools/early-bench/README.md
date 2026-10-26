@@ -83,6 +83,17 @@ New-method details:
   Both are checked for a plausible count (> 0 and at most window / refresh period + 10 %); an implausible count
   fails the journey's observations of that source. Polling SurfaceFlinger during the flings costs device CPU
   (limitation `sf-latency-polled-during-scroll`). `--scroll-journeys` (default 5, 0 skips) sets the blocks.
+- iOS simulator sizes (build unit, descriptive, limitation `descriptive-simulator-build`):
+  `size.ios.simulator_installed_app/app-container-file-bytes/1` (regular-file bytes below
+  `simctl get_app_container <udid> <bundle> app` after the verified install; equals the frozen bundle bytes because
+  the installed tree hash is checked), `size.ios.simulator_data_container/data-container-file-bytes/1` (data
+  container after one unmeasured launch to FUI + 2 s and terminate) and
+  `size.ios.simulator_app_deflate_estimate/zip-9-bytes/1` (`zip -r -9 -X -y` of the frozen `.app`; a descriptive
+  compressed-size estimate, NOT the App Store thinned download size).
+- `early.scroll` on the iOS simulator is `unavailable` (manifest `notCollected`): an XCUITest probe running the same
+  fling plan inside `measure(metrics: [XCTOSSignpostMetric.scrollingAndDecelerationMetric])` on the iOS 27.1
+  simulator (Xcode 27.1, native candidate) reported only `Duration (Scroll_DraggingAndDeceleration)`; hitch time
+  ratio, frame count and frame rate are not reported there, and the simulator has no harness-free per-frame source.
 - Energy and thermals are not collected on the emulator or simulator (no battery or thermal model); they are listed
   in `notCollected`.
 

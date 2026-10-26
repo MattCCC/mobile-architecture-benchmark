@@ -201,6 +201,13 @@ export const NOT_COLLECTED = {
     { metricId: 'startup.ttfd_system', status: 'not-applicable', reason: 'android-only-metric', source: 'Activity.reportFullyDrawn() exists only on Android' },
     { metricId: 'size.ios.download', status: 'unavailable', reason: 'requires-signing' },
     { metricId: 'size.ios.installed', status: 'unavailable', reason: 'requires-signing' },
+    { scenarioId: 'early.scroll', metricId: 'frame.ios.scroll_*', status: 'unavailable',
+      reason: 'simulator-reports-no-hitch-metrics: XCTOSSignpostMetric.scrollingAndDecelerationMetric on the iOS 27.1 simulator (Xcode 27.1, '
+        + 'XCUITest flings over native List) reported only "Duration (Scroll_DraggingAndDeceleration)"; hitch time ratio, frame count and '
+        + 'frame rate are not reported, and no harness-free per-frame source exists on the simulator (no SurfaceFlinger equivalent; '
+        + 'in-app display-link counters would need candidate changes)' },
+    { metricId: 'energy.*', status: 'unavailable', reason: 'simulator-has-no-battery-model' },
+    { metricId: 'thermal.*', status: 'unavailable', reason: 'simulator-has-no-thermal-model' },
     { scenarioId: 'early.warm', status: 'not-applicable', reason: 'no activity-warm start on iOS', source: 'iOS distinguishes launch and resume only (scenario A3 is Android-only)' },
   ],
 };

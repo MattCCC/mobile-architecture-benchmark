@@ -1586,6 +1586,43 @@ function summarizeHeadline(obs) {
 // ======================================================================================================
 // iOS simulator
 // ======================================================================================================
+// Installed bundle bytes (after install), data container bytes (after one unmeasured first launch to FUI + 2 s)
+// and the deflate (zip -9) estimate of the frozen .app.
+async function iosSizeObservations({ c, f, ins, sizeBase, base, write, udid, stream, o, sdir }) {
+  const out = [];
+  const lim = ['descriptive-simulator-build'];
+  const w1 = `installed app container ${ins.installed?.bytes ?? 'n/a'} bytes in ${ins.installed?.files ?? 'n/a'} files, tree sha256 ${ins.installed?.sha256 ?? 'n/a'}`;
+  const f1 = write(`${base}/installed-app-bytes.txt`, `${w1}\n`).file;
+  out.push(ins.installed ? makeObservation(sizeBase, { methodId: 'size.ios.simulator_installed_app/app-container-file-bytes/1', status: 'measured',
+    value: ins.installed.bytes, limitations: lim, rawRefs: [{ file: f1, line: 1, text: w1 }] })
+    : makeObservation(sizeBase, { methodId: 'size.ios.simulator_installed_app/app-container-file-bytes/1', status: 'failed', failure: { class: 'instrument-error', message: 'app container unreadable' } }));
+  const jid = `size-first-${c.token}`;
+  const lr = await ios.simctl(['launch', udid, c.bundleId, '-mb.journey', jid, '-mb.journeyMode', '1', '-mb.profile', o.profile], { timeoutMs: 60000 });
+  const fui = lr.code === 0 ? await stream.waitFor((e) => e.journeyId === jid && e.event === 'fui', 30000) : null;
+  await sleep(2000);
+  await ios.simctl(['terminate', udid, c.bundleId], { timeoutMs: 30000 });
+  await sleep(1000);
+  const data = existsSync(ins.dataPath) ? sha256Tree(ins.dataPath) : null;
+  const w2 = `data container after first launch (fui seen ${Boolean(fui)}): ${data?.bytes ?? 'n/a'} bytes in ${data?.files ?? 'n/a'} files`;
+  const f2 = write(`${base}/data-container-bytes.txt`, `${w2}\n`).file;
+  out.push(data && fui ? makeObservation(sizeBase, { methodId: 'size.ios.simulator_data_container/data-container-file-bytes/1', status: 'measured',
+    value: data.bytes, limitations: lim, rawRefs: [{ file: f2, line: 1, text: w2 }] })
+    : makeObservation(sizeBase, { methodId: 'size.ios.simulator_data_container/data-container-file-bytes/1', status: 'failed',
+      failure: { class: data ? 'timeout' : 'instrument-error', message: data ? 'fui not observed on the first launch' : 'data container unreadable' } }));
+  const tmp = join(sdir, 'tmp');
+  mkdirSync(tmp, { recursive: true });
+  const zipPath = join(tmp, `${c.token}.zip`);
+  rmSync(zipPath, { force: true });
+  const z = await run('sh', ['-c', 'cd "$1" && /usr/bin/zip -r -9 -X -y -q "$2" "$3"', 'sh', dirname(f.absFrozen), zipPath, f.absFrozen.split('/').pop()], { timeoutMs: 300000 });
+  const zipBytes = z.code === 0 && existsSync(zipPath) ? readFileSync(zipPath).length : null;
+  rmSync(tmp, { recursive: true, force: true });
+  const w3 = `zip -r -9 -X -y of the frozen .app: ${zipBytes ?? 'n/a'} bytes (exit ${z.code}; descriptive estimate, not the App Store thinned size)`;
+  const f3 = write(`${base}/app-deflate-bytes.txt`, `${w3}\n${z.stderr}`).file;
+  out.push(zipBytes !== null ? makeObservation(sizeBase, { methodId: 'size.ios.simulator_app_deflate_estimate/zip-9-bytes/1', status: 'measured',
+    value: zipBytes, limitations: [...lim, 'descriptive-estimate-not-app-store-size'], rawRefs: [{ file: f3, line: 1, text: w3 }] })
+    : makeObservation(sizeBase, { methodId: 'size.ios.simulator_app_deflate_estimate/zip-9-bytes/1', status: 'failed', failure: { class: 'instrument-error', message: `zip exit ${z.code}` } }));
+  return out;
+}
 const I_START = ['startup.process_to_fui/early-ios-markers/1'];
 const I_MEM = ['memory.ios.phys_footprint/early-mem-marker-background/1'];
 const BACKGROUND_APP = 'com.apple.Preferences';
@@ -1688,7 +1725,7 @@ async function runIos(ctx, { selected, builds, schedule, sid4, hostStart, progre
     if (!verified) {
       return { ok: false, reason: 'installed-artifact-mismatch' };
     }
-    return { ok: true, dataPath };
+    return { ok: true, dataPath, appPath, installed };
   };
 
   const C = {};
@@ -1720,6 +1757,7 @@ async function runIos(ctx, { selected, builds, schedule, sid4, hostStart, progre
     const sizeFile = write(`${base}/artifact-sizes.txt`, `${sizeLine}\n`).file;
     allObs.push(makeObservation(sizeBase, { methodId: 'size.ios.simulator_app/app-dir-file-bytes/1', status: 'measured', value: f.bytes,
       limitations: ['descriptive-simulator-build'], rawRefs: [{ file: sizeFile, line: 1, text: sizeLine }] }));
+    allObs.push(...(await iosSizeObservations({ c, f, ins, sizeBase, base, write, udid, stream, o, sdir: ctx.sdir })));
   }
   resets['R-INSTALL'] = { applied: true, verify: 'tree sha256 of the installed bundle == frozen copy (mismatch: candidate not measured)' };
   resets['R-ART'] = { applied: false, reason: 'not applicable on iOS (no OS-controlled compilation state for app code)' };
