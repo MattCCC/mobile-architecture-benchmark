@@ -44,7 +44,8 @@ writeFileSync(markersPath, '');
 
 async function artifactPath() {
   const r = await run('make', ['-s', '-C', repo, `artifacts-${args.candidate}-android`], { timeoutMs: 60000 });
-  const line = r.stdout.trim().split('\n').filter(Boolean).pop();
+  // Some candidates also list an AAB; the driver installs the APK.
+  const line = r.stdout.trim().split('\n').filter((l) => l.endsWith('.apk')).pop();
   if (r.code !== 0 || !line) throw new Error(`no Android artifact for ${args.candidate}: ${r.stderr.trim()}`);
   return resolve(repo, line);
 }
@@ -119,7 +120,8 @@ function parseHierarchy(xml) {
     const attrs = Object.fromEntries([...m[1].matchAll(/([\w-]+)="([^"]*)"/g)].map((a) => [a[1], unescapeXml(a[2])]));
     const b = /\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]/.exec(attrs.bounds ?? '') ?? [0, 0, 0, 0, 0];
     const node = { id: attrs['resource-id'] ?? '', desc: attrs['content-desc'] ?? '', text: attrs.text ?? '',
-      checked: attrs.checked === 'true', bounds: { l: +b[1], t: +b[2], r: +b[3], b: +b[4] }, all: [] };
+      // The selected option of a row: toolkits expose it as checked (toggle) or selected (chosen item).
+      checked: attrs.checked === 'true' || attrs.selected === 'true', bounds: { l: +b[1], t: +b[2], r: +b[3], b: +b[4] }, all: [] };
     node.id = node.id.replace(/^.*:id\//, '');
     for (const parent of stack) parent.all.push(node);
     nodes.push(node);
@@ -196,6 +198,13 @@ const stop = () => sh(`am force-stop ${pkg}`);
 const home = () => sh('input keyevent KEYCODE_HOME');
 // Brings the existing task back: the same explicit, action-less intent the task was started with, NEW_TASK only
 // (a launcher MAIN/LAUNCHER intent does not match that root intent and would stack a new activity instead).
+/** HOME, then both the background marker and the checkpoint (toolkits emit them in either order). */
+async function background(journey) {
+  const from = markers.length;
+  await home();
+  await waitMarker(journey, 'bg', () => true, 10000, from);
+  return waitMarker(journey, 'state', () => true, 10000, from);
+}
 const foreground = () => sh(`am start -W -f 0x10000000 -n ${component}`, { timeoutMs: 60000 });
 
 async function back(ui) {
@@ -241,7 +250,6 @@ function expect(id, cond, detail) {
 }
 
 let selection = model.selection.map((s) => ({ ...s }));
-let lastSeqLo = 0;
 
 /** Visible rows: labels exact; option state exact; values and total consistent with the stream window. */
 function checkList(id, ui, lo, hi) {
@@ -254,7 +262,7 @@ function checkList(id, ui, lo, hi) {
       const opt = ui.find(`mb.row.${i}.opt.${k}`);
       expect(id, opt, `row ${i} option ${k} missing`);
       const selected = selection.some((s) => s.i === i && s.o === o);
-      expect(id, opt.checked === selected, `row ${i} option ${k} checked=${opt.checked}, expected ${selected}`);
+      expect(id, opt.checked === selected, `row ${i} option ${k} checked/selected=${opt.checked}, expected ${selected}`);
       const v = /(\d+\.\d\d)/.exec(textOf(opt))?.[1];
       const allowed = [...model.valueSet(i, o, lo, hi)].map((x) => model.fmtValue(x));
       expect(id, v && allowed.includes(v), `row ${i} option ${k} shows ${v}, expected one of ${allowed.join('|')} (seq ${lo}..${hi})`);
@@ -424,15 +432,11 @@ async function main() {
   let bgState = null;
   await runCheck('live-update', async () => {
     await sleep(3000);
-    const from = markers.length;
-    await home();
-    await waitMarker(j, 'bg', () => true, 10000, from);
-    bgState = await waitMarker(j, 'state', () => true, 10000, from);
+    bgState = await background(j);
     const seq = Number(bgState.payloadFields.s);
     const expected = model.stateDigest(seq, selection).slice(0, 16);
     expect('live-update', seq > 0, `no updates applied (s=${seq})`);
     expect('live-update', bgState.payloadFields.d === expected, `state digest ${bgState.payloadFields.d} != reference ${expected} at seq ${seq}`);
-    lastSeqLo = seq;
     return `${seq} updates applied; state digest at seq ${seq} equals the reference`;
   });
 
@@ -446,8 +450,7 @@ async function main() {
     expect('background-foreground', Number(open.payloadFields.from) === s1 + 1, `resumed from ${open.payloadFields.from}, expected ${s1 + 1}`);
     await sleep(3000);
     from = markers.length;
-    await home();
-    const st = await waitMarker(j, 'state', () => true, 10000, from);
+    const st = await background(j);
     const s2 = Number(st.payloadFields.s);
     const expected = model.stateDigest(s2, selection).slice(0, 16);
     expect('background-foreground', s2 > s1, `no progress after foreground (${s1} -> ${s2})`);
@@ -465,8 +468,7 @@ async function main() {
     await tap(ui.find('mb.row.2.label') ?? fail0('mb.row.2.label'));
     await screen(j, 'detail/2', from);
     from = markers.length;
-    await home();
-    const st = await waitMarker(j, 'state', () => true, 10000, from);
+    const st = await background(j);
     const s = Number(st.payloadFields.s);
     await stop();
     j = await launch({ 'mb.restore': '1' });

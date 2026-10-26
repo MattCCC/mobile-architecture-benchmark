@@ -48,7 +48,7 @@ public final class MbDump {
         out.write("<node index=\"" + index + "\" text=\"" + esc(node.getText()) + "\" resource-id=\""
             + esc(node.getViewIdResourceName()) + "\" class=\"" + esc(node.getClassName()) + "\" content-desc=\""
             + esc(node.getContentDescription()) + "\" checkable=\"" + node.isCheckable() + "\" checked=\""
-            + node.isChecked() + "\" clickable=\"" + node.isClickable() + "\" bounds=\"[" + r.left + "," + r.top
+            + node.isChecked() + "\" selected=\"" + node.isSelected() + "\" clickable=\"" + node.isClickable() + "\" bounds=\"[" + r.left + "," + r.top
             + "][" + r.right + "," + r.bottom + "]\">");
         for (int i = 0; i < node.getChildCount(); i++) {
             AccessibilityNodeInfo child = node.getChild(i);
