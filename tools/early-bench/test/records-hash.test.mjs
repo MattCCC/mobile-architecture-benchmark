@@ -52,7 +52,7 @@ test('registry: every method id is <design metric id>/<instrument>/<version>, ea
   for (const [id, m] of Object.entries(METHODS)) {
     assert.match(id, /^[a-z0-9_.]+\/[a-z0-9-]+\/\d+$/);
     assert.ok(id.startsWith(`${m.metricId}/`), id);
-    assert.ok(['ns', 'bytes'].includes(m.unit), id);
+    assert.ok(['ns', 'bytes', 'count', 'percent', 'mAh', 'celsius'].includes(m.unit), id);
     assert.ok(m.procedure && m.designRef, id);
   }
   for (const id of Object.keys(SCENARIOS)) {

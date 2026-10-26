@@ -50,7 +50,41 @@ never shuts down a device it did not boot.
 | `early.cold` (process-cold) | A1 | `startup.ttff/early-am-start-w/1`, `startup.ttfd_system/early-logcat-fully-drawn/1` | `startup.process_to_fui/early-ios-markers/1` |
 | `early.warm` (activity-warm) | A3 | same two methods | not applicable (Android-only scenario) |
 | `early.idle-memory` | D1 | `memory.android.pss_total/early-dumpsys-meminfo-idle/1` | `memory.ios.phys_footprint/early-mem-marker-background/1` |
+| `early.scroll` (process-cold) | B | `frame.android.scroll_{frame_count,janky_frames_pct,frame_time_p50,frame_time_p90,frame_time_p99}/early-sf-latency/1` (every toolkit) and `.../early-perfetto-frametimeline/1` (view toolkits; unavailable for Flutter) | see below |
 | `early.size` (build unit) | E1–E3 | `size.android.apk_arm64/file-bytes/1`, `size.android.aab/file-bytes/1` | `size.ios.simulator_app/app-dir-file-bytes/1` (descriptive) |
+| `early.size` installed | 15.2 | `size.android.installed_code/early-diskstats-app-size/1`, `size.android.installed_data/early-diskstats-data-size/1`, `size.android.installed/early-diskstats-code-plus-data/1` | see below |
+| `early.size` download | 15.2 | `size.android.download_estimate/apkanalyzer-download-size/1` (APK model, not the Play AAB download) | see below |
+
+New-method details:
+
+- Installed size (Android): after install, the session ART compile and one unmeasured cold launch to FUI + 2 s per
+  candidate, the runner forces the `DiskStatsLoggingService` job (`cmd jobscheduler run -f android <id>`, id from
+  `dumpsys jobscheduler`), waits until `/data/system/diskstats_cache.json` is rewritten, and reads
+  `dumpsys diskstats`: the per-package "App Sizes" (code: APK, libs, dexopt output) and "App Data Sizes" arrays,
+  filled by StorageStatsManager. No root is needed (`du` cannot read `oat/` as the shell user on API 37).
+  Raw: `raw/setup/diskstats.txt`, `diskstats-job.txt`.
+- Download estimate (Android): `apkanalyzer apk download-size` on the frozen APK (SDK cmdline-tools; version in
+  `manifest.tools.apkanalyzer`). Raw: `raw/setup/<token>/apkanalyzer-download-size.txt`. An AAB/split download
+  estimate (bundletool) is not collected.
+- `early.scroll` (Android): cold launch to FUI + 2 s, then `--scroll-swipes` (default 8) flings from a plan seeded by
+  the session seed (fractions of the screen; every 4th fling reversed; 80–180 ms strokes, 1.2 s apart; stored in
+  `plan.swipePlan`), run as one device shell script (`raw/journeys/<id>/swipes.sh`). Two sources in the same journey,
+  never pooled:
+  - `early-sf-latency`: `dumpsys SurfaceFlinger --latency <layer>` (a 64-entry ring) polled every 500 ms for every
+    app layer (`VRI-*` window and `SurfaceView[...](BLAST)`), merged by present time minus the pre-fling baseline;
+    the layer with the most presented buffers is used and recorded (`diagnostics.scrollFrameSource`; Flutter: the
+    SurfaceView layer). Frame time = present-to-present interval; intervals > 100 ms are idle breaks between flings
+    and excluded (a longer hitch is not counted: jank is a lower bound); janky = interval > 1.5 x refresh period.
+  - `early-perfetto-frametimeline`: a Perfetto trace of `android.surfaceflinger.frametimeline`
+    (`raw/.../frametimeline.pftrace`, decoded by `lib/frametimeline.mjs` into `frametimeline-frames.txt`); actual
+    surface frames of the app pid; frame time = actual surface frame duration; janky = jank type other than none,
+    buffer-stuffing or non-animating. Flutter (SurfaceView without frame-timeline vsync ids) has no surface frames:
+    `unavailable: no-frametimeline-surface-frames-for-app-pid`.
+  Both are checked for a plausible count (> 0 and at most window / refresh period + 10 %); an implausible count
+  fails the journey's observations of that source. Polling SurfaceFlinger during the flings costs device CPU
+  (limitation `sf-latency-polled-during-scroll`). `--scroll-journeys` (default 5, 0 skips) sets the blocks.
+- Energy and thermals are not collected on the emulator or simulator (no battery or thermal model); they are listed
+  in `notCollected`.
 
 Method ids have the form `<metricId>/<instrument>/<version>`; `lib/methods.mjs` holds each procedure. Early
 scenario ids never equal benchmark scenario ids, and early methods are never pooled with driver methods of the

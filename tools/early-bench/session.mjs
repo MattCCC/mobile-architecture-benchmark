@@ -23,8 +23,12 @@ import { JOURNEY_SCHEMA, journeyStatus, makeObservation, notAttemptedReason, raw
 import {
   checkFuiPayload, crashClass, findCrash, parseAmStart, parseBadging, parseBroadcastResult, parseDexopt, parseDisplayed,
   parseFullyDrawn, parseMarkersJsonl, parseMbLogcat, parseMeminfo, parsePayload, parseProcStatus,
-  parseResolveActivity, parseSimctlLaunch, streamConnectBeforeFui,
+  parseResolveActivity, parseSimctlLaunch, streamConnectBeforeFui, parseApkanalyzerBytes, parseDiskstatsPackage,
 } from './lib/parse.mjs';
+import {
+  frameTimelineMetrics, frameTimelineText, mergeSfPolls, sfSummaryLine, parseSfLatency, planDurationMs, plausibleFrameCount, sfLatencyMetrics, sfLayersFor,
+  swipePlan, swipeScript,
+} from './lib/scroll.mjs';
 import * as android from './lib/android.mjs';
 import * as ios from './lib/ios.mjs';
 import { verifyAcceptanceReceipt } from '../acceptance/lib.mjs';
@@ -40,6 +44,8 @@ options:
   --journeys <n>           journeys per candidate for each startup scenario (default 10)
   --memory-journeys <n>    journeys per candidate for idle memory (default: --journeys)
   --idle-s <s>             idle time on List before the memory read (default 30)
+  --scroll-journeys <n>    journeys per candidate for early.scroll (default 5; 0 skips the scenario)
+  --scroll-swipes <n>      flings per early.scroll journey (default 8)
   --profile <name>         fixture profile passed as mb.profile (default representative)
   --stream-source <name>   required candidate stream source: replay or server (default replay)
   --seed <uint32>          schedule seed (default: random, recorded)
@@ -69,6 +75,7 @@ function cli(argv) {
       candidates: { type: 'string' }, 'run-id': { type: 'string' }, design: { type: 'string' },
       'design-ref': { type: 'string', default: '' }, 'verification-note': { type: 'string', default: '' },
       journeys: { type: 'string', default: '10' }, 'memory-journeys': { type: 'string' }, 'idle-s': { type: 'string', default: '30' },
+      'scroll-journeys': { type: 'string', default: '5' }, 'scroll-swipes': { type: 'string', default: '8' },
       profile: { type: 'string', default: 'representative' },
       'stream-source': { type: 'string', default: 'replay' },
       seed: { type: 'string' }, 'budget-min': { type: 'string', default: '30' }, 'watchdog-min': { type: 'string', default: '35' },
@@ -143,6 +150,8 @@ function cli(argv) {
     journeys,
     memoryJourneys: int('memory-journeys', 0, 100),
     idleS: int('idle-s', 1, 600),
+    scrollJourneys: int('scroll-journeys', 0, 100),
+    scrollSwipes: int('scroll-swipes', 1, 50),
     profile: values.profile,
     streamSource: values['stream-source'],
     seed: values.seed === undefined ? randomBytes(4).readUInt32BE(0) : int('seed', 0, 4294967295),
@@ -167,16 +176,20 @@ function cli(argv) {
 // ---------- time estimates (seconds) used only for the budget plan ----------
 // Android per candidate: setup (install, ART) 40; priming 10 per group; cold journey 8; warm journey 13 (its
 // tool-warmup launch included); memory journey idle + 12; 1.5 per block for R-PROC and the dexopt read.
-export function estimate(platform, { journeys, memoryJourneys, idleS }) {
+// Scroll journey: launch + fling plan + 3 s settle + trace pull and parsing.
+export function estimate(platform, { journeys, memoryJourneys, idleS, scrollJourneys = 0, scrollSwipes = 8 }) {
+  const scrollS = (swipes) => swipes * 1.33 + 3;
   if (platform === 'android') {
-    const groups = 2 + (memoryJourneys > 0 ? 1 : 0);
-    const blocks = 2 * journeys + memoryJourneys;
-    const perCandidate = 40 + groups * 10 + journeys * 8 + journeys * 13 + memoryJourneys * (idleS + 12) + blocks * 1.5;
-    return { overheadS: 150 + 60, perCandidateS: perCandidate };
+    const groups = 2 + (memoryJourneys > 0 ? 1 : 0) + (scrollJourneys > 0 ? 1 : 0);
+    const blocks = 2 * journeys + memoryJourneys + scrollJourneys;
+    const perCandidate = 40 + 15 + groups * 10 + journeys * 8 + journeys * 13 + memoryJourneys * (idleS + 12)
+      + scrollJourneys * (14 + scrollS(scrollSwipes)) + blocks * 1.5;
+    return { overheadS: 150 + 60 + 20, perCandidateS: perCandidate };
   }
-  const groups = 1 + (memoryJourneys > 0 ? 1 : 0);
-  const blocks = journeys + memoryJourneys;
-  const perCandidate = 25 + groups * 20 + journeys * 16 + memoryJourneys * (idleS + 18) + blocks * 1;
+  const groups = 1 + (memoryJourneys > 0 ? 1 : 0) + (scrollJourneys > 0 ? 1 : 0);
+  const blocks = journeys + memoryJourneys + scrollJourneys;
+  const perCandidate = 25 + 15 + groups * 20 + journeys * 16 + memoryJourneys * (idleS + 18)
+    + scrollJourneys * (20 + scrollS(scrollSwipes)) + blocks * 1;
   return { overheadS: 90 + 40, perCandidateS: perCandidate };
 }
 
@@ -187,6 +200,9 @@ function groupsFor(platform, o) {
   }
   if (o.memoryJourneys > 0) {
     g.push({ id: 'early.idle-memory', blocks: o.memoryJourneys });
+  }
+  if (o.scrollJourneys > 0 && platform === 'android') {
+    g.push({ id: 'early.scroll', blocks: o.scrollJourneys });
   }
   return g;
 }
@@ -336,7 +352,8 @@ async function main() {
   });
   const plan = {
     platform: o.platform, candidates: selected.map((c) => c.id), groups, journeysPerCandidate: o.journeys,
-    memoryJourneysPerCandidate: o.memoryJourneys, idleS: o.idleS, profile: o.profile, streamSource: o.streamSource, seed: o.seed,
+    memoryJourneysPerCandidate: o.memoryJourneys, idleS: o.idleS, scrollJourneysPerCandidate: o.scrollJourneys,
+    scrollSwipes: o.scrollSwipes, swipePlan: swipePlan(o.seed, o.scrollSwipes), profile: o.profile, streamSource: o.streamSource, seed: o.seed,
     estimateS: est.overheadS + selected.length * est.perCandidateS, estimateModel: est, budgetS, watchdogS: o.watchdogMin * 60,
     incompleteBlockDesign,
     notMeasured: candidateRecords,
@@ -575,6 +592,22 @@ async function checkOtherDevices(o, probe, log) {
 // ======================================================================================================
 const A_START = ['startup.ttff/early-am-start-w/1', 'startup.ttfd_system/early-logcat-fully-drawn/1'];
 const A_MEM = ['memory.android.pss_total/early-dumpsys-meminfo-idle/1'];
+const SCROLL_METRICS = ['frame_count', 'janky_frames_pct', 'frame_time_p50', 'frame_time_p90', 'frame_time_p99'];
+const A_SCROLL_SF = SCROLL_METRICS.map((m) => `frame.android.scroll_${m}/early-sf-latency/1`);
+const A_SCROLL_FT = SCROLL_METRICS.map((m) => `frame.android.scroll_${m}/early-perfetto-frametimeline/1`);
+const A_SCROLL = [...A_SCROLL_SF, ...A_SCROLL_FT];
+
+// Five scroll observations of one source from its metrics; a source that fails plausibility is failed.
+export function scrollObservations(base, ids, m, ref, { windowNs, refreshNs, limitations = [] }) {
+  const check = plausibleFrameCount(m.frames, windowNs, refreshNs);
+  if (!check.pass) {
+    return ids.map((methodId) => makeObservation(base, { methodId, status: 'failed', failure: { class: 'instrument-error', message: `implausible frame count: ${check.reason}` } }));
+  }
+  const vals = [m.frames, m.jankyPct, m.p50, m.p90, m.p99];
+  return ids.map((methodId, i) => (vals[i] === null || vals[i] === undefined
+    ? makeObservation(base, { methodId, status: 'failed', failure: { class: 'instrument-error', message: 'too few frames for the statistic' } })
+    : makeObservation(base, { methodId, status: 'measured', value: vals[i], limitations, rawRefs: [ref] })));
+}
 
 function findAapt2() {
   const root = process.env.ANDROID_HOME ? join(process.env.ANDROID_HOME, 'build-tools') : null;
@@ -602,12 +635,14 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
   const adbPath = tool('adb');
   const emulatorPath = tool('emulator');
   const aapt2 = findAapt2();
+  const apkanalyzer = findApkanalyzer();
   const resets = {};
   const write = rawWriter(ctx);
   const tools = {
     adb: await firstLine(adbPath, ['version'], 2),
     emulator: await firstLine(emulatorPath, ['-version'], 1),
     aapt2: aapt2 ? await firstLine(aapt2, ['version'], 1) : null,
+    apkanalyzer: apkanalyzer ? cmdlineToolsRevision(apkanalyzer) : null,
   };
 
   // ---- device: reuse a running mobilebench AVD, else cold-boot it ----
@@ -790,6 +825,26 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     if (!builds[c.id].frozen.some((x) => x.kind === 'aab')) {
       allObs.push(makeObservation(sizeBase, { methodId: 'size.android.aab/file-bytes/1', status: 'not-measured', reason: 'artifact-not-provided' }));
     }
+    allObs.push(await apkDownloadEstimate(apkanalyzer, f.absFrozen, sizeBase, (rel, t) => write(`${base}/${rel}`, t)));
+    C[c.id].sizeBase = sizeBase;
+  }
+  // installed bytes: one unmeasured first launch per candidate, then one forced diskstats collection for all
+  if (Object.keys(C).length > 0) {
+    for (const id of Object.keys(C)) {
+      const jid = `${sid4}.size.first.${C[id].c.token}`;
+      await dev.sh(`am force-stop ${C[id].c.packageName}`);
+      await sleep(1000);
+      const since = mbStream.mark();
+      const am = await dev.sh(`am start -W -f 0x10008000 -n ${C[id].component} --es mb.journey ${jid} --es mb.journeyMode 1 --es mb.profile ${o.profile}`, { timeoutMs: 60000 });
+      const fui = am.code === 0 ? await mbStream.waitFor((e) => e.event === 'fui', { since, timeoutMs: 20000 }) : null;
+      await sleep(2000);
+      await dev.sh(`am force-stop ${C[id].c.packageName}`);
+      write(`setup/${C[id].c.token}/size-first-launch.txt`, `${am.stdout}\nfui seen ${Boolean(fui)}\n`);
+    }
+    const ds = await forcedDiskstats(dev, (rel, t) => write(`setup/${rel}`, t));
+    for (const id of Object.keys(C)) {
+      allObs.push(...installedSizeObservations(ds, C[id].c.packageName, C[id].sizeBase));
+    }
   }
   resets['R-INSTALL'] = { applied: true, verify: 'sha256sum of installed base.apk == frozen artifact' };
   resets['R-ART'] = { applied: true, procedure: 'early.art.partial-use-if-available.shell', steps: ART_STEPS };
@@ -818,7 +873,113 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
   const amCmd = (component, jid) => `am start -W -f 0x10008000 -n ${component} --es mb.journey ${jid} --es mb.journeyMode 1 --es mb.profile ${o.profile}`;
   // waits for the next fui line on the long-lived MobileBench reader (control signal only, never a timing source)
   const waitFui = (since, timeoutMs) => mbStream.waitFor((e) => e.event === 'fui', { since, timeoutMs });
-  const launch = async (j, { mode, memory = false }) => {
+  // ---- early.scroll: fling plan with SurfaceFlinger per-layer polling and a FrameTimeline trace ----
+  const wm = (await dev.sh('wm size', { timeoutMs: 15000 })).stdout;
+  const wmM = /Override size: (\d+)x(\d+)/.exec(wm) ?? /Physical size: (\d+)x(\d+)/.exec(wm);
+  const screen = wmM ? { width: Number(wmM[1]), height: Number(wmM[2]) } : { width: 1080, height: 2400 };
+  const plan = swipePlan(o.seed, o.scrollSwipes);
+  const planMs = planDurationMs(plan);
+  const traceMs = planMs + 4000;
+  const ftConfig = `buffers { size_kb: 16384 fill_policy: RING_BUFFER }\ndata_sources { config { name: "android.surfaceflinger.frametimeline" } }\nduration_ms: ${traceMs}\n`;
+  const scrollPhase = async (j, pkg, jdir) => {
+    const sc = { plan: { seed: o.seed, swipes: plan.length, screen, planMs } };
+    j.scroll = sc;
+    j.pid = await pidof(pkg);
+    const list = await dev.sh('dumpsys SurfaceFlinger --list', { timeoutMs: 30000 });
+    const listW = write(`${jdir}/sf-list.txt`, list.stdout);
+    j.rawFiles.push(listW.file);
+    const layers = sfLayersFor(listW.text, pkg);
+    sc.layers = layers;
+    const poll = async (tag) => {
+      const out = [];
+      for (const [i, name] of layers.entries()) {
+        const r = await dev.sh(`dumpsys SurfaceFlinger --latency '${name}'`, { timeoutMs: 15000 });
+        out.push({ layer: name, text: `# layer ${name}\n${r.stdout}`, i });
+      }
+      return out.map((p) => ({ ...p, tag }));
+    };
+    // config via a pushed file (the config is the same for every journey of the session)
+    await dev.sh(`echo '${ftConfig.replace(/\n/g, ' ')}' > /data/misc/perfetto-configs/early-scroll.pbtx`, { timeoutMs: 15000 });
+    const traceDev = `/data/misc/perfetto-traces/early-scroll-${j.journeyId}.pftrace`;
+    const pf = await dev.sh(`perfetto --background --txt -c /data/misc/perfetto-configs/early-scroll.pbtx -o ${traceDev}`, { timeoutMs: 30000 });
+    write(`${jdir}/perfetto-start.txt`, `${pf.stdout}${pf.stderr}`);
+    sc.perfettoPid = /^\d+$/.test(pf.stdout.trim()) ? pf.stdout.trim() : null;
+    await sleep(1000);
+    const baseline = await poll('baseline');
+    const script = swipeScript(plan, screen);
+    write(`${jdir}/swipes.sh`, `${script}\n`);
+    const t0 = Date.now();
+    const swipes = dev.sh(script, { timeoutMs: planMs + 60000 });
+    const polls = [];
+    let done = false;
+    swipes.then(() => { done = true; });
+    while (!done) {
+      polls.push(...(await poll(`p${String(polls.length).padStart(3, '0')}`)));
+      await sleep(500);
+    }
+    const sw = await swipes;
+    await sleep(2500); // settle: the last fling decelerates
+    polls.push(...(await poll('settle')));
+    sc.swipesExit = sw.code;
+    sc.windowMs = Date.now() - t0;
+    // wait for the trace to finish (duration_ms) and pull it
+    const left = traceMs + 1000 - (Date.now() - t0) - 1000;
+    if (left > 0) {
+      await sleep(left);
+    }
+    for (let k = 0; k < 20; k += 1) {
+      const alive = sc.perfettoPid ? (await dev.sh(`kill -0 ${sc.perfettoPid} 2>/dev/null && echo alive`, { timeoutMs: 10000 })).stdout.includes('alive') : false;
+      if (!alive) {
+        break;
+      }
+      await sleep(500);
+    }
+    const local = join(rawDir, jdir, 'frametimeline.pftrace');
+    mkdirSync(dirname(local), { recursive: true });
+    const pull = await dev.adb(['pull', traceDev, local], { timeoutMs: 60000 });
+    await dev.sh(`rm -f ${traceDev}`, { timeoutMs: 15000 });
+    sc.trace = pull.code === 0 && existsSync(local) ? { file: `raw/${jdir}/frametimeline.pftrace`, abs: local } : null;
+    if (sc.trace) {
+      j.rawFiles.push(sc.trace.file);
+    }
+    // write SF polls: one file per layer, polls concatenated in order
+    sc.sf = layers.map((name, i) => {
+      const parts = [...baseline, ...polls].filter((p) => p.i === i);
+      let text = '';
+      const parsedPolls = [];
+      let base = null;
+      for (const p of parts) {
+        const startLine = text.split('\n').length; // 1-based line of "# poll" header
+        text += `# poll ${p.tag}\n${p.text.replace(/\r/g, '')}${p.text.endsWith('\n') ? '' : '\n'}`;
+        const parsed = parseSfLatency(p.text.replace(/\r/g, '').split('\n').slice(1).join('\n'));
+        // shift line numbers to the file: header "# poll" + "# layer" lines precede the dumpsys output
+        parsed.frames = parsed.frames.map((f) => ({ ...f, line: f.line + startLine + 1 }));
+        if (p.tag === 'baseline') {
+          base = parsed;
+        } else {
+          parsedPolls.push({ parsed });
+        }
+      }
+      const w = write(`${jdir}/sf-latency-${i}.txt`, text);
+      j.rawFiles.push(w.file);
+      const frames = mergeSfPolls(base, parsedPolls).map((f) => ({ ...f, file: w.file }));
+      const refreshNs = base?.refreshNs ?? parsedPolls[0]?.parsed.refreshNs ?? null;
+      return { layer: name, file: w.file, frames, refreshNs, metrics: sfLatencyMetrics(frames, refreshNs) };
+    });
+    const sumLines = sc.sf.map((x) => sfSummaryLine(x.layer, x.metrics));
+    const sumW = write(`${jdir}/sf-summary.txt`, `${sumLines.join('\n')}\n`);
+    j.rawFiles.push(sumW.file);
+    sc.sf.forEach((x, i) => { x.summaryRef = { file: sumW.file, line: i + 1, text: sumLines[i] }; });
+    if (sc.trace) {
+      const m = frameTimelineMetrics(readFileSync(sc.trace.abs), j.pid);
+      const t = frameTimelineText(m, j.pid);
+      const ftW = write(`${jdir}/frametimeline-frames.txt`, t.text);
+      j.rawFiles.push(ftW.file);
+      const { list, ...rest } = m;
+      sc.ft = { ...rest, summaryRef: { file: ftW.file, line: t.summaryLine, text: t.summary } };
+    }
+  };
+  const launch = async (j, { mode, memory = false, scroll = false }) => {
     const x = C[j.candidateId];
     const pkg = x.c.packageName;
     const jdir = `journeys/${j.journeyId}`;
@@ -849,6 +1010,9 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     j.fuiSeenByStream = Boolean(fuiLine);
     j.fuiStreamJourneyId = fuiLine ? fuiLine.journeyId : null;
     await sleep(2000);
+    if (scroll && j.role === 'measured') {
+      await scrollPhase(j, pkg, jdir);
+    }
     if (memory) {
       await sleep(o.idleS * 1000);
       const pid = await pidof(pkg);
@@ -952,7 +1116,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
             await launch(tw, { mode: 'cold' });
             results.push(tw);
           }
-          await launch(j, { mode, memory: g.id === 'early.idle-memory' });
+          await launch(j, { mode, memory: g.id === 'early.idle-memory', scroll: g.id === 'early.scroll' });
           ran += 1;
           results.push(j);
           progress({ planned: planned.length, ran, current: j.journeyId });
@@ -998,6 +1162,81 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     results.push(markNotRun({ ...p }, ctx.abort ?? 'unknown'));
   }
   return finish({ planned: planned.length, ran, results, C, builds });
+}
+
+// SDK cmdline-tools apkanalyzer: "latest" first, else the highest numbered version.
+function findApkanalyzer() {
+  const home = process.env.ANDROID_HOME ?? join(homedir(), 'Library', 'Android', 'sdk');
+  const root = join(home, 'cmdline-tools');
+  if (!existsSync(root)) {
+    return null;
+  }
+  const dirs = readdirSync(root).filter((d) => existsSync(join(root, d, 'bin', 'apkanalyzer')))
+    .sort((a, b) => (a === 'latest' ? 1 : (b === 'latest' ? -1 : a.localeCompare(b, 'en', { numeric: true }))));
+  return dirs.length > 0 ? join(root, dirs[dirs.length - 1], 'bin', 'apkanalyzer') : null;
+}
+
+function cmdlineToolsRevision(apkanalyzer) {
+  const p = join(dirname(dirname(apkanalyzer)), 'source.properties');
+  const m = existsSync(p) ? /Pkg\.Revision=(\S+)/.exec(readFileSync(p, 'utf8')) : null;
+  return `apkanalyzer (cmdline-tools ${m ? m[1] : 'unknown revision'})`;
+}
+
+async function apkDownloadEstimate(apkanalyzer, apk, sizeBase, write) {
+  const methodId = 'size.android.download_estimate/apkanalyzer-download-size/1';
+  if (!apkanalyzer) {
+    return makeObservation(sizeBase, { methodId, status: 'unavailable', reason: 'toolchain-missing:apkanalyzer' });
+  }
+  const r = await run(apkanalyzer, ['apk', 'download-size', apk], { timeoutMs: 120000 });
+  const w = write('apkanalyzer-download-size.txt', `${r.stdout}${r.stderr ? `\n# stderr\n${r.stderr}` : ''}`);
+  const p = r.code === 0 ? parseApkanalyzerBytes(w.text) : null;
+  return p
+    ? makeObservation(sizeBase, { methodId, status: 'measured', value: p.bytes, rawRefs: [rawRef(w.file, p.ref)] })
+    : makeObservation(sizeBase, { methodId, status: 'failed', failure: { class: 'instrument-error', message: `apkanalyzer exit ${r.code}` } });
+}
+
+// Forces the DiskStatsLoggingService job and waits for its cache file to be rewritten, then dumps diskstats.
+async function forcedDiskstats(dev, write) {
+  const mtime = async () => (await dev.sh('stat -c %Y /data/system/diskstats_cache.json', { timeoutMs: 15000 })).stdout.trim();
+  const jobs = (await dev.sh('dumpsys jobscheduler', { timeoutMs: 60000 })).stdout;
+  const job = /JOB #\d+\/(-?\d+): \S+ android\/com\.android\.server\.storage\.DiskStatsLoggingService/.exec(jobs)?.[1] ?? null;
+  if (!job) {
+    write('diskstats-job.txt', 'DiskStatsLoggingService job not found in dumpsys jobscheduler\n');
+    return { ok: false, reason: 'diskstats-job-not-found' };
+  }
+  const m0 = await mtime();
+  const rr = await dev.sh(`cmd jobscheduler run -f android ${job}`, { timeoutMs: 30000 });
+  let m1 = m0;
+  const deadline = Date.now() + 90000;
+  while (m1 === m0 && Date.now() < deadline) {
+    await sleep(2000);
+    m1 = await mtime();
+  }
+  write('diskstats-job.txt', `job ${job}\nrun: ${rr.stdout.trim()} (exit ${rr.code})\ncache mtime before ${m0 || 'absent'} after ${m1 || 'absent'}\n`);
+  if (m1 === m0 || !m1) {
+    return { ok: false, reason: 'diskstats-cache-not-refreshed-within-90s' };
+  }
+  const d = await dev.sh('dumpsys diskstats', { timeoutMs: 60000 });
+  const w = write('diskstats.txt', d.stdout);
+  return { ok: true, file: w.file, text: w.text };
+}
+
+function installedSizeObservations(ds, pkg, sizeBase) {
+  const ids = ['size.android.installed_code/early-diskstats-app-size/1', 'size.android.installed_data/early-diskstats-data-size/1',
+    'size.android.installed/early-diskstats-code-plus-data/1'];
+  if (!ds.ok) {
+    return ids.map((methodId) => makeObservation(sizeBase, { methodId, status: 'failed', failure: { class: 'instrument-error', message: ds.reason } }));
+  }
+  const p = parseDiskstatsPackage(ds.text, pkg);
+  if (!p) {
+    return ids.map((methodId) => makeObservation(sizeBase, { methodId, status: 'failed', failure: { class: 'instrument-error', message: 'package not in diskstats' } }));
+  }
+  const refs = (...k) => [rawRef(ds.file, p.refs.names), ...k.map((x) => rawRef(ds.file, p.refs[x]))];
+  return [
+    makeObservation(sizeBase, { methodId: ids[0], status: 'measured', value: p.codeBytes, rawRefs: refs('code') }),
+    makeObservation(sizeBase, { methodId: ids[1], status: 'measured', value: p.dataBytes, rawRefs: refs('data') }),
+    makeObservation(sizeBase, { methodId: ids[2], status: 'measured', value: p.codeBytes + p.dataBytes, rawRefs: refs('code', 'data') }),
+  ];
 }
 
 const ART_STEPS = [
@@ -1060,7 +1299,9 @@ async function finishAndroid({ ctx, env, dev, adbPath, bootedBySession, serial, 
   const kindOf = (j) => (j.scenarioId === 'early.warm' && j.role === 'measured' ? 'warm' : 'cold');
   const seenFui = {};
   const seenFd = {};
+  const seenFt = {};
   for (const j of results.filter((r) => !r.notRun)) {
+    seenFt[j.candidateId] = Boolean(seenFt[j.candidateId] || (j.scroll?.ft?.frames > 0));
     const k = `${j.candidateId}|${kindOf(j)}`;
     seenFui[k] = Boolean(seenFui[k] || j.fui);
     seenFd[k] = Boolean(seenFd[k] || j.fullyDrawn);
@@ -1073,7 +1314,7 @@ async function finishAndroid({ ctx, env, dev, adbPath, bootedBySession, serial, 
       journeysOut.push(journeyRecord(ctx, env, x.c, x.buildClass, j));
       continue;
     }
-    const methods = j.scenarioId === 'early.idle-memory' ? A_MEM : A_START;
+    const methods = j.scenarioId === 'early.idle-memory' ? A_MEM : (j.scenarioId === 'early.scroll' ? A_SCROLL : A_START);
     if (j.notRun) {
       notAttempted += 1;
       journeysOut.push(journeyRecord(ctx, env, x.c, x.buildClass, j));
@@ -1108,7 +1349,26 @@ async function finishAndroid({ ctx, env, dev, adbPath, bootedBySession, serial, 
       continue;
     }
     const lim = j.fui ? [] : ['fui-marker-missing'];
-    if (methods === A_START) {
+    if (methods === A_SCROLL) {
+      const sc = j.scroll;
+      const windowNs = (sc?.windowMs ?? 0) * 1e6;
+      const best = (sc?.sf ?? []).slice().sort((a, b) => b.metrics.frames - a.metrics.frames)[0] ?? null;
+      if (!sc || sc.swipesExit !== 0 || !best) {
+        allObs.push(...failAll(base, A_SCROLL, { class: 'harness-error', message: !sc ? 'scroll phase did not run' : (best ? `swipe script exit ${sc.swipesExit}` : 'no app layer found in SurfaceFlinger') }));
+        continue;
+      }
+      j.diagnostics.scrollFrameSource = { sfLayer: best.layer, sfFrames: best.metrics.frames, frametimelineFrames: sc.ft?.frames ?? null, frametimelineLayers: sc.ft?.layers ?? null };
+      allObs.push(...scrollObservations(base, A_SCROLL_SF, best.metrics, best.summaryRef, { windowNs, refreshNs: best.refreshNs,
+        limitations: [...lim, 'sf-latency-polled-during-scroll', /SurfaceView/.test(best.layer) ? 'frame-layer-surfaceview' : 'frame-layer-window'] }));
+      if (!sc.ft) {
+        allObs.push(...failAll(base, A_SCROLL_FT, { class: 'instrument-error', message: 'perfetto trace missing' }));
+      } else if (sc.ft.frames === 0 && !seenFt[j.candidateId]) {
+        allObs.push(...A_SCROLL_FT.map((methodId) => makeObservation(base, { methodId, status: 'unavailable',
+          reason: `no-frametimeline-surface-frames-for-app-pid (${sc.ft.allSurfaceFrames} surface frames of other processes in the trace; toolkit submits buffers without a frame-timeline vsync id)` })));
+      } else {
+        allObs.push(...scrollObservations(base, A_SCROLL_FT, sc.ft, sc.ft.summaryRef, { windowNs: windowNs + 4e9, refreshNs: best.refreshNs, limitations: [...lim, 'sf-latency-polled-during-scroll'] }));
+      }
+    } else if (methods === A_START) {
       allObs.push(j.am.totalTimeMs !== null
         ? makeObservation(base, { methodId: A_START[0], status: 'measured', value: j.am.totalTimeMs * 1e6, limitations: lim, rawRefs: [rawRef(j.am.file, j.am.refs.totalTime)] })
         : makeObservation(base, { methodId: A_START[0], status: 'failed', failure: { class: 'instrument-error', message: 'TotalTime missing' } }));

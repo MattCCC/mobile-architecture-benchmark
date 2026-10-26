@@ -206,6 +206,15 @@ function fmt(value, unit) {
   if (unit === 'bytes') {
     return (value / 1048576).toFixed(2);
   }
+  if (unit === 'percent') {
+    return value.toFixed(2);
+  }
+  if (unit === 'count') {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  }
+  if (typeof value === 'number' && !Number.isInteger(value)) {
+    return value.toFixed(3);
+  }
   return String(value);
 }
 
@@ -215,6 +224,9 @@ function unitLabel(unit) {
   }
   if (unit === 'bytes') {
     return 'MiB';
+  }
+  if (unit === 'percent') {
+    return '%';
   }
   return unit ?? '';
 }
@@ -266,6 +278,14 @@ function buildTable(rows) {
   return table(['candidate', 'method id', 'artifact sha256', 'bytes (exact)', 'MiB', 'recorded in sessions', 'observation status'], body);
 }
 
+const isInstalled = (m) => /installed|data_container/.test(m);
+const isEstimate = (m) => /download_estimate|deflate_estimate/.test(m);
+const SIZE_FAMILIES = [
+  ['artifact bytes', (m) => !isInstalled(m) && !isEstimate(m)],
+  ['installed bytes (after install and first launch)', isInstalled],
+  ['download / compressed-size estimates (models, not store downloads)', isEstimate],
+];
+
 function platformTitle(p) {
   return p === 'android' ? 'Android emulator' : 'iOS simulator';
 }
@@ -287,9 +307,13 @@ function sectionFor(model, buildClassFilter) {
       out.push(`#### ${sc} (scenario ref ${info?.designRef ?? '?'}; ${info?.cacheState ?? ''})`, '');
       out.push(rowTable(pr.filter((r) => r.scenarioId === sc)), '');
     }
-    if (pb.length > 0) {
-      out.push('#### early.size (build-unit observations: one exact value per artifact, not pooled)', '');
-      out.push(buildTable(pb), '');
+    // size families get their own tables: raw artifact bytes, installed bytes, download / compressed estimates
+    for (const [title, test] of SIZE_FAMILIES) {
+      const fam = pb.filter((r) => test(r.methodId));
+      if (fam.length > 0) {
+        out.push(`#### early.size: ${title} (build-unit observations: one exact value per artifact, not pooled)`, '');
+        out.push(buildTable(fam), '');
+      }
     }
   }
   return out;

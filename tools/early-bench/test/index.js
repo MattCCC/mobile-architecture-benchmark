@@ -5,3 +5,4 @@ import './records-hash.test.mjs';
 import './combine.test.mjs';
 import './session-plan.test.mjs';
 import './finalize.test.mjs';
+import './scroll-size.test.mjs';

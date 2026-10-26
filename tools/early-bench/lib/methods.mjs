@@ -68,14 +68,105 @@ export const METHODS = {
     procedure: 'sum of regular-file byte lengths below the frozen simulator .app directory (symlinks not followed); descriptive',
     resolution: '1 byte', clock: 'n/a', designRef: 'delivery size: simulator .app bytes (descriptive only)',
   },
+  ...installedAndDownloadMethods(),
+  ...scrollMethods(),
 };
+
+function installedAndDownloadMethods() {
+  const diskstats = 'after install, the session ART compile and one unmeasured process-cold launch to FUI + 2 s (then '
+    + 'force-stop), the DiskStatsLoggingService job is forced (`cmd jobscheduler run -f android <job id>`, waited for '
+    + 'by the mtime of /data/system/diskstats_cache.json) and `dumpsys diskstats` is read; the per-package arrays are '
+    + 'filled from StorageStatsManager (no root needed)';
+  return {
+    'size.android.installed_code/early-diskstats-app-size/1': {
+      metricId: 'size.android.installed_code', platform: 'android', unit: 'bytes', unitOfObservation: 'build',
+      procedure: `${diskstats}; value = "App Sizes" entry of the package (APK, extracted libs, ART dexopt output)`,
+      resolution: '1 byte (filesystem allocation)', clock: 'n/a', designRef: '15.2 installed bytes (code)',
+    },
+    'size.android.installed_data/early-diskstats-data-size/1': {
+      metricId: 'size.android.installed_data', platform: 'android', unit: 'bytes', unitOfObservation: 'build',
+      procedure: `${diskstats}; value = "App Data Sizes" entry of the package after the first launch (cache bytes are in raw/)`,
+      resolution: '1 byte (filesystem allocation)', clock: 'n/a', designRef: '15.2 installed bytes (data after first launch)',
+    },
+    'size.android.installed/early-diskstats-code-plus-data/1': {
+      metricId: 'size.android.installed', platform: 'android', unit: 'bytes', unitOfObservation: 'build',
+      procedure: `${diskstats}; value = "App Sizes" + "App Data Sizes" of the package`,
+      resolution: '1 byte (filesystem allocation)', clock: 'n/a', designRef: '15.2 installed bytes',
+    },
+    'size.android.download_estimate/apkanalyzer-download-size/1': {
+      metricId: 'size.android.download_estimate', platform: 'android', unit: 'bytes', unitOfObservation: 'build',
+      procedure: '`apkanalyzer apk download-size <frozen APK>` (SDK cmdline-tools): estimated over-the-wire size of the '
+        + 'measured APK; NOT the Play split-APK download of the AAB',
+      resolution: '1 byte (estimate)', clock: 'n/a', designRef: '15.2 download estimate (APK, apkanalyzer model)',
+    },
+    'size.ios.simulator_installed_app/app-container-file-bytes/1': {
+      metricId: 'size.ios.simulator_installed_app', platform: 'ios', unit: 'bytes', unitOfObservation: 'build',
+      procedure: 'sum of regular-file byte lengths below `xcrun simctl get_app_container <udid> <bundle> app` after install; descriptive',
+      resolution: '1 byte', clock: 'n/a', designRef: '15.2 installed bytes (simulator bundle, descriptive only)',
+    },
+    'size.ios.simulator_data_container/data-container-file-bytes/1': {
+      metricId: 'size.ios.simulator_data_container', platform: 'ios', unit: 'bytes', unitOfObservation: 'build',
+      procedure: 'sum of regular-file byte lengths below the data container (`get_app_container ... data`) after one '
+        + 'unmeasured process-cold launch to FUI + 2 s and terminate; descriptive',
+      resolution: '1 byte', clock: 'n/a', designRef: '15.2 installed bytes (simulator data after first launch, descriptive only)',
+    },
+    'size.ios.simulator_app_deflate_estimate/zip-9-bytes/1': {
+      metricId: 'size.ios.simulator_app_deflate_estimate', platform: 'ios', unit: 'bytes', unitOfObservation: 'build',
+      procedure: 'byte length of `zip -r -9 -X -y -q` (deflate) of the frozen simulator .app; a DESCRIPTIVE compressed-size '
+        + 'estimate, not the App Store thinned download size (which requires a signed device build)',
+      resolution: '1 byte (estimate)', clock: 'n/a', designRef: '15.2 download estimate (descriptive simulator proxy)',
+    },
+  };
+}
+
+// early.scroll frame methods. One id per source; sources are never pooled with each other.
+function scrollMethods() {
+  const out = {};
+  const sources = {
+    'early-sf-latency': {
+      platform: 'android',
+      procedure: 'process-cold launch to FUI + 2 s, then the seeded fling plan (`input swipe` in one device shell script) on '
+        + 'List while the stream runs; `dumpsys SurfaceFlinger --latency <layer>` polled every 500 ms on the app layer that '
+        + 'presented the most buffers (VRI-* window or the SurfaceView BLAST layer, recorded), merged by present time, frames '
+        + 'of the pre-fling baseline poll excluded; frame time = present-to-present interval, intervals > 100 ms are idle '
+        + 'breaks between flings (excluded, so longer hitches are not counted: jank is a lower bound); janky = interval > 1.5 x refresh period',
+      designRef: 'early-session instrument: SurfaceFlinger per-layer present timestamps (every toolkit)',
+    },
+    'early-perfetto-frametimeline': {
+      platform: 'android',
+      procedure: 'same journey; Perfetto data source android.surfaceflinger.frametimeline recorded over the fling plan; actual '
+        + 'surface frames of the app pid; frame time = actual surface frame duration; janky = SurfaceFlinger jank type other '
+        + 'than none / buffer-stuffing / non-animating. Toolkits that submit buffers without a frame-timeline vsync id '
+        + '(Flutter SurfaceView) have no surface frames: unavailable',
+      designRef: 'early-session instrument: SurfaceFlinger FrameTimeline (view toolkits)',
+    },
+  };
+  const metrics = [
+    ['frame_count', 'count', 'frames in the fling window'],
+    ['janky_frames_pct', 'percent', 'janky frames / frames x 100'],
+    ['frame_time_p50', 'ns', 'p50 frame time (Hyndman-Fan 7)'],
+    ['frame_time_p90', 'ns', 'p90 frame time'],
+    ['frame_time_p99', 'ns', 'p99 frame time'],
+  ];
+  for (const [inst, s] of Object.entries(sources)) {
+    for (const [m, unit, what] of metrics) {
+      const metricId = `frame.${s.platform}.scroll_${m}`;
+      out[`${metricId}/${inst}/1`] = {
+        metricId, platform: s.platform, unit, unitOfObservation: 'journey', procedure: `${s.procedure}; value = ${what}`,
+        resolution: unit === 'ns' ? '1 ns (device clock)' : 'n/a', clock: 'device CLOCK_MONOTONIC (SurfaceFlinger)', designRef: s.designRef,
+      };
+    }
+  }
+  return out;
+}
 
 // Metrics of the early-session subset that early sessions do not collect, with the status the manifest records.
 export const NOT_COLLECTED = {
   android: [
     { metricId: 'startup.fui', status: 'not-measured', reason: 'needs-perfetto-trace-processing (the logcat mirror is a control signal, never a timing source)' },
-    { metricId: 'size.android.installed', status: 'not-measured', reason: 'needs-android-driver (StorageStatsManager)' },
-    { metricId: 'size.android.download_estimate', status: 'not-measured', reason: 'toolchain-missing:bundletool' },
+    { metricId: 'size.android.aab_download_estimate', status: 'not-measured', reason: 'toolchain-missing:bundletool (AAB split download estimate not required for early sessions)' },
+    { metricId: 'energy.*', status: 'unavailable', reason: 'emulator-has-no-battery-model (no physical device in this session)' },
+    { metricId: 'thermal.*', status: 'unavailable', reason: 'emulator-has-no-thermal-model (no physical device in this session)' },
   ],
   ios: [
     { metricId: 'startup.ttff', status: 'not-measured', reason: 'needs-xcuitest-driver (XCTApplicationLaunchMetric)' },
@@ -100,6 +191,10 @@ export const SCENARIOS = {
   'early.idle-memory': {
     designRef: 'D1', cacheState: 'process-cold',
     differences: 'process-cold launch, FUI, idle on List, memory read without a checkpoint request (Android) / at the background checkpoint (iOS); no CPU window',
+  },
+  'early.scroll': {
+    designRef: 'B (scroll)', cacheState: 'process-cold',
+    differences: 'process-cold launch to FUI + 2 s, then a fixed seeded sequence of fling swipes on List while the stream runs; frames from shell-level SurfaceFlinger sources, not the benchmark frame driver',
   },
   'early.size': {
     designRef: 'E1-E3', cacheState: 'n/a', differences: 'one build-unit observation per frozen artifact; installed and download sizes need the driver or signing',

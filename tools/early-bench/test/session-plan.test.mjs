@@ -53,7 +53,7 @@ function plan(repo, extra) {
     '--acceptance-receipt', `${id}:android=${join(repo, 'receipts', id, 'receipt.json')}`,
   ]);
   const out = execFileSync(process.execPath, [CLI, '--platform', 'android', '--repo', repo, '--out', join(repo, 'o'), '--artifacts', join(repo, 'f'),
-    '--run-id', 'r1', '--seed', '7', '--plan-only', ...receipts, ...extra], { encoding: 'utf8' });
+    '--run-id', 'r1', '--seed', '7', '--plan-only', '--scroll-journeys', '0', ...receipts, ...extra], { encoding: 'utf8' });
   return JSON.parse(out);
 }
 
@@ -79,6 +79,9 @@ test('plan-only: verified hash mismatch and missing manifest become not-measured
     assert.ok(p2.plan.candidates.includes('native'));
     assert.deepEqual(p2.plan.incompleteBlockDesign.excluded.length, 1);
     assert.deepEqual(plan(repo, ['--candidates', 'flutter,native,expo']), p2);
+    const p3 = plan(repo, ['--candidates', 'flutter,native', '--scroll-journeys', '2', '--scroll-swipes', '3', '--budget-min', '120']);
+    assert.deepEqual(p3.schedule.groups.map((g) => g.id), ['early.cold', 'early.warm', 'early.idle-memory', 'early.scroll']);
+    assert.equal(p3.plan.swipePlan.length, 3);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }

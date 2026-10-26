@@ -374,3 +374,44 @@ export function parseAdbDevices(text) {
     .filter(Boolean)
     .map((m) => ({ serial: m[1], state: m[2] }));
 }
+
+// `dumpsys diskstats` (after the DiskStatsLoggingService job ran): parallel JSON arrays "Package Names",
+// "App Sizes", "App Data Sizes", "Cache Sizes" filled from StorageStatsManager. Returns the entry of one package
+// with the line refs of the four arrays, or null when the package is not listed.
+export function parseDiskstatsPackage(text, pkg) {
+  const ls = lines(text);
+  const arr = (key) => {
+    const i = ls.findIndex((l) => l.startsWith(`${key}: [`));
+    if (i < 0) {
+      return null;
+    }
+    try {
+      return { values: JSON.parse(ls[i].slice(key.length + 2)), ref: ref(i + 1, ls[i]) };
+    } catch {
+      return null;
+    }
+  };
+  const names = arr('Package Names');
+  const code = arr('App Sizes');
+  const data = arr('App Data Sizes');
+  const cache = arr('Cache Sizes');
+  if (!names || !code || !data || !cache) {
+    return null;
+  }
+  const idx = names.values.indexOf(pkg);
+  if (idx < 0 || ![code, data, cache].every((a) => a.values.length === names.values.length)) {
+    return null;
+  }
+  const at = (a) => Number(a.values[idx]);
+  return {
+    index: idx, codeBytes: at(code), dataBytes: at(data), cacheBytes: at(cache),
+    refs: { names: names.ref, code: code.ref, data: data.ref, cache: cache.ref },
+  };
+}
+
+// `apkanalyzer apk download-size <apk>`: one integer line (bytes).
+export function parseApkanalyzerBytes(text) {
+  const ls = lines(text);
+  const i = ls.findIndex((l) => /^\d+$/.test(l.trim()));
+  return i < 0 ? null : { bytes: Number(ls[i].trim()), ref: ref(i + 1, ls[i]) };
+}
