@@ -5,9 +5,10 @@ reference app: a long, live-updating list of items with selectable options, a de
 feature. All candidates are measured with one shared method, the same deterministic workload and the same functional
 acceptance checks.
 
-> **Status: work in progress.** No results are published yet. Early runs on the Android emulator and the iOS
-> simulator are pipeline validation only. They are not representative of physical devices and are not part of
-> this repository.
+> **Status: work in progress.** All eight candidates build and launch, but no results are published yet: the
+> acceptance gate that admits a build into a benchmark session is not operational (see
+> [Current status](#current-status)). Early runs on the Android emulator and the iOS simulator are pipeline
+> validation only and are not representative of physical devices.
 
 ## What is being compared
 
@@ -16,26 +17,43 @@ everything that ships: framework, runtime, build configuration, navigation, stat
 candidate runs the same reference app on the same workload, so differences in the numbers come from the
 architecture, not from the app doing different work.
 
-| Id | Architecture | Status |
-| --- | --- | --- |
-| `native` | Fully native: Jetpack Compose (Android) and UIKit (iOS) | runnable |
-| `flutter` | Flutter | runnable |
-| `expo` | React Native with Expo | runnable |
-| `repack` | React Native with Re.Pack and remote modules | runnable |
-| `nativescript` | NativeScript | runnable |
-| `island-rn` | Native shell with React Native Detail and Insights islands | runnable |
-| `island-flutter` | Native shell with Flutter Detail and Insights islands | runnable (iOS simulator: debug) |
-| `island-nativescript` | Native shell with NativeScript Detail and Insights islands | runnable |
+### Whole-app candidates
 
-`island-rn` is a brownfield setup: native List and Selection screens, with Detail and Insights as React Native
-islands sharing one runtime. The native host owns data, streaming, navigation, restoration and state; the RN code
-ships as an Android AAR and is linked into the iOS app through CocoaPods via React Native Brownfield. Work lives in
-`candidates/_island-host`, `candidates/_island-rn-ui` and `candidates/island-rn`. It is registered in the Makefile
-and benchmark runner; like every candidate, an exact artifact still needs a passing acceptance receipt before a
-session will measure it.
+The entire app, every screen, is written in one framework.
+
+| Id | Architecture | Android build | iOS simulator build |
+| --- | --- | --- | --- |
+| `native` | Fully native: Jetpack Compose (Android) and UIKit (iOS) | release | release |
+| `flutter` | Flutter | release | device only (Flutter has no release simulator build) |
+| `expo` | React Native with Expo | release | release |
+| `repack` | React Native with Re.Pack and remote modules | release | release |
+| `nativescript` | NativeScript (core + TypeScript) | release | release |
+
+### Island candidates (native shell + cross-platform UI islands)
+
+A brownfield architecture: the app is native, and a cross-platform runtime renders only some screens. All three
+island candidates share one byte-identical native host (`candidates/_island-host`: Jetpack Compose on Android,
+UIKit on iOS) that owns the List and Selection screens, navigation, data, the stream, persistence and restoration.
+Only the Detail and Insights screens are islands: one embedded runtime renders both, from versioned JSON state
+messages the host sends. Islands never hold their own copy of the data. The runtime starts at the first island open
+(`mb.engine=lazy`, default) or during launch (`mb.engine=prewarm`).
+
+| Id | Island runtime | Host ↔ island bridge | Android build | iOS simulator build |
+| --- | --- | --- | --- | --- |
+| `island-rn` | React Native (Hermes) via React Native Brownfield | asynchronous messages | release | release |
+| `island-flutter` | Flutter add-to-app engine | asynchronous MethodChannel | release | debug (Flutter limitation) |
+| `island-nativescript` | NativeScript V8 runtime, `@nativescript/core` views | synchronous native calls | release | release |
+
+Comparing an island candidate with `native` shows what one embedded runtime costs inside an otherwise native app.
+Comparing the island candidates with each other isolates the runtime, since the shell is identical. The island
+protocol parser and view model are shared pure TypeScript (`candidates/_island-rn-ui`), used by the RN and
+NativeScript islands; Flutter ports the same model to Dart.
 
 Shared React Native code lives in `candidates/_rn-shared`. Each candidate's README lists its versions, its build
-configuration and what has been verified on each platform.
+configuration, its deviations and what has been verified on each platform.
+
+Debug builds (`island-flutter@debug` on the iOS simulator) are reported in their own section and never pooled with
+release builds.
 
 ## The reference app (the workload)
 
@@ -125,12 +143,28 @@ physical devices. There is **no composite score or overall ranking**; results ar
 candidate/platform cell becomes rankable only after accepted independent review and a passing eligibility audit
 (`tools/eligibility/`). Method details: `tools/early-bench/README.md`.
 
+## Current status
+
+| Area | State |
+| --- | --- |
+| Candidates | 8 implemented; all build for Android and the iOS simulator (except `flutter` iOS: device build only) |
+| Unit and contract tests | `make check` passes |
+| Acceptance receipts | **Missing.** The receipt format and verifier exist; the platform drivers that run the 11 contract checks and write receipts do not, and the `instrumentation-overhead` check also needs the shared calibrated BenchKit |
+| Benchmark runner | Implemented (`tools/early-bench`); without receipts it reports every candidate `not-measured` |
+| Reference devices | Android AVD `mobilebench_api37` and iOS simulator `mobilebench-iphone` (iOS 27.0) must be created locally |
+| Published results | None |
+
+Next steps, in order: the Android acceptance driver, then the first Android early session and its `summary.md`
+tables, then the iOS acceptance driver and sessions.
+
 ## Repository layout
 
 - `fixtures/`: the deterministic workload generator (seeded, integer fixed-point values) and the generated
   fixtures with their checksums.
 - `candidates/<id>/`: one directory per candidate, with `candidate.json` (self-description), `candidate.mk` (make
   targets) and a README.
+- `candidates/_island-host/`, `candidates/_island-rn-ui/`, `candidates/_rn-shared/`: code shared between
+  candidates (the native island host, the island protocol and view model, the React Native UI).
 - `tools/`: benchmark tooling. Node.js built-ins only, managed with npm.
 - `tools/acceptance/`: shared black-box check contract and verifier for artifact-bound acceptance receipts.
 - `tools/eligibility/`: fail-closed audits for candidate readiness and publishable physical-device result sets.
@@ -142,8 +176,11 @@ Requirements: Node.js 24.11.1 (see `.nvmrc`), npm and GNU Make. To build candida
 toolchains listed in each candidate's README (JDK 17, Android SDK, Xcode, Flutter, CocoaPods).
 
 ```sh
-make help
-make check
+make help                                  # all targets and registered candidates
+make check                                 # fixture, acceptance, eligibility and runner tests
+make check-<id>                            # one candidate's checks, e.g. make check-island-nativescript
+make build-<id>-android build-<id>-ios     # build one candidate
+make artifacts-<id>-android                # print the built artifact path
 ```
 
 ## Provenance and potential bias
