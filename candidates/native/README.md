@@ -77,7 +77,7 @@ Exact versions; resolved Android dependencies are pinned in `android/buildscript
 | Android | Kotlin Gradle plugin / Compose compiler plugin | 2.4.21 / 2.4.21 |
 | Android | Compose BOM (resolved Compose UI / foundation / runtime) | 2026.09.00 (1.12.1) |
 | Android | activity-compose / navigation-compose / profileinstaller | 1.13.0 / 2.10.2 / 1.4.1 |
-| Android | compileSdk / targetSdk / minSdk | 37 / 37 / 24 |
+| Android | compileSdk / targetSdk / minSdk | 37 / 36 / 24 |
 | Android | JDK | 17 |
 | Android | Unit tests: JUnit / org.json (JVM tests only) | 4.13.2 / 20260814 |
 | iOS | Xcode / iOS SDK | 27.1 (27A9275) / 27.1 |

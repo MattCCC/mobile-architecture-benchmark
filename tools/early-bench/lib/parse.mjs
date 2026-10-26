@@ -201,7 +201,16 @@ export function parseProcStatus(text) {
 export function parseBadging(text) {
   const t = String(text ?? '');
   const pkg = /package: name='([^']+)'/.exec(t);
-  return { packageName: pkg ? pkg[1] : null, debuggable: /^application-debuggable\b/m.test(t) };
+  const min = /^sdkVersion:'(\d+)'/m.exec(t);
+  const target = /^targetSdkVersion:'(\d+)'/m.exec(t);
+  const native = /^native-code:\s*(.*)$/m.exec(t);
+  return {
+    packageName: pkg ? pkg[1] : null,
+    debuggable: /^application-debuggable\b/m.test(t),
+    minSdk: min ? Number(min[1]) : null,
+    targetSdk: target ? Number(target[1]) : null,
+    nativeCode: native ? [...native[1].matchAll(/'([^']+)'/g)].map((m) => m[1]) : [],
+  };
 }
 
 // `cmd package resolve-activity --brief <pkg>`: last line is the component.

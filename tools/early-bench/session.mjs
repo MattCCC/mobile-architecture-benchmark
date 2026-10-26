@@ -28,6 +28,7 @@ import {
 import * as android from './lib/android.mjs';
 import * as ios from './lib/ios.mjs';
 import { verifyAcceptanceReceipt } from '../acceptance/lib.mjs';
+import { androidArtifactBuildProblems, declaredBuildProblems, loadBuildPolicy } from './lib/build-policy.mjs';
 
 export const TOOL_VERSION = '0.2.0';
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -251,6 +252,7 @@ const NULL_LOG = { info() {}, warn() {}, error() {}, redact() {}, scrub: (s) => 
 // ======================================================================================================
 async function main() {
   const o = cli(process.argv.slice(2));
+  const buildPolicy = loadBuildPolicy(o.repo);
   const sessionId = `s-${utcStamp()}-${o.platform}-${randomBytes(2).toString('hex')}`;
   const sid4 = sessionId.slice(-4);
   const sdir = join(o.out, sessionId);
@@ -282,6 +284,11 @@ async function main() {
     if (c.streamSource !== o.streamSource) {
       candidateRecords.push({ id: c.id, status: 'not-measured', reason: 'stream-source-mismatch',
         detail: `candidate declares ${c.streamSource}; session requires ${o.streamSource}` });
+      continue;
+    }
+    const buildProblems = declaredBuildProblems(c, o.platform, buildPolicy.value);
+    if (buildProblems.length > 0) {
+      candidateRecords.push({ id: c.id, status: 'not-measured', reason: 'build-policy-mismatch', detail: buildProblems.join('; ') });
       continue;
     }
     const src = join(o.repo, c.dir, c.artifacts[0].rel);
@@ -349,6 +356,7 @@ async function main() {
     environmentClass: o.platform === 'android' ? 'emulator' : 'simulator',
     status: 'running', failureReason: null, startedAt, endedAt: null, lockAcquiredAt: o.lockAcquiredAt,
     design: { sha256: o.designSha256, ref: o.designRef },
+    buildPolicy: { path: buildPolicy.path, sha256: buildPolicy.sha256 },
     verification: { note: o.verificationNote, candidatesRequested: o.candidates,
       expectedArtifacts: Object.fromEntries(Object.entries(o.expect).map(([k, v]) => [k, v.text])),
       acceptanceReceipts: Object.fromEntries(selected.map((c) => [c.id, c.acceptance])) },
@@ -702,11 +710,17 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     const f = builds[c.id].frozen.find((x) => x.kind === 'apk');
     const base = `setup/${c.token}`;
     const badging = aapt2 ? await run(aapt2, ['dump', 'badging', f.absFrozen], { timeoutMs: 60000 }) : null;
-    const bad = badging ? parseBadging(badging.stdout) : { debuggable: null, packageName: null };
+    const bad = badging ? parseBadging(badging.stdout) : { debuggable: null, packageName: null, minSdk: null, targetSdk: null, nativeCode: [] };
     if (badging) {
       write(`${base}/badging.txt`, badging.stdout);
     }
     const buildClass = bad.debuggable === null ? (c.declaredBuildClass ?? 'unknown') : (bad.debuggable ? 'debug' : 'release');
+    const artifactBuildProblems = badging ? androidArtifactBuildProblems(bad, buildPolicy.value) : ['aapt2 unavailable'];
+    if (artifactBuildProblems.length > 0) {
+      candidateRecords.push({ id: c.id, status: 'not-measured', reason: 'artifact-build-policy-mismatch',
+        detail: artifactBuildProblems.join('; ') });
+      continue;
+    }
     await dev.adb(['uninstall', c.packageName], { timeoutMs: 60000 });
     const inst = await dev.adb(['install', f.absFrozen], { timeoutMs: 180000 });
     write(`${base}/install.txt`, `${inst.stdout}${inst.stderr}`);

@@ -91,7 +91,7 @@ android {
     defaultConfig {
         applicationId = "org.example.mobilebench.nativeapp"
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
         // arm64-v8a-only measurement builds (design §13.1). The only native library in the APK comes from

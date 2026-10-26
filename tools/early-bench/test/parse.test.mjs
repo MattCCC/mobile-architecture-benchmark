@@ -105,7 +105,8 @@ test('dexopt state section (ART service format) and a truncated capture', () => 
 test('proc status, badging, resolve-activity, broadcast, crash', () => {
   const p = parseProcStatus('Name:\tx\nVmHWM:\t  120000 kB\nVmRSS:\t   98000 kB\n');
   assert.deepEqual([p.vmRssKb, p.vmHwmKb, p.refs.vmRssKb.line], [98000, 120000, 3]);
-  assert.deepEqual(parseBadging("package: name='org.example.a' versionCode='1'\napplication-debuggable\n"), { packageName: 'org.example.a', debuggable: true });
+  assert.deepEqual(parseBadging("package: name='org.example.a' versionCode='1'\nsdkVersion:'24'\ntargetSdkVersion:'36'\nnative-code: 'arm64-v8a'\napplication-debuggable\n"),
+    { packageName: 'org.example.a', debuggable: true, minSdk: 24, targetSdk: 36, nativeCode: ['arm64-v8a'] });
   assert.equal(parseBadging("package: name='org.example.a'\n").debuggable, false);
   assert.equal(parseResolveActivity('priority=0 preferredOrder=0\norg.example.a/.MainActivity\n'), 'org.example.a/.MainActivity');
   assert.equal(parseResolveActivity('No activity found\n'), null);

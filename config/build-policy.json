@@ -1,0 +1,15 @@
+{
+  "schema": "mobilebench.build-policy/1.0.0",
+  "android": {
+    "minSdk": 24,
+    "targetSdk": 36,
+    "abi": "arm64-v8a",
+    "eligibleBuildClass": "release"
+  },
+  "ios": {
+    "deploymentTarget": "16.4",
+    "arch": "arm64",
+    "eligibleBuildClass": "release",
+    "descriptiveBuildClasses": ["debug"]
+  }
+}

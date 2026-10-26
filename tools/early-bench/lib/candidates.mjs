@@ -95,6 +95,7 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
     limitations: familyLimitations(family, platform),
     streamSource,
     streamSourceBasis: p.streamSource ? 'candidate.json streamSource' : 'not declared',
+    benchmarkBuild: p.benchmarkBuild ?? null,
     buildInputs: inputs.dirs,
     sharedBuildInputs: inputs.shared,
     sharedBuildInputsBasis: inputs.basis,

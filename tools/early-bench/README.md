@@ -13,6 +13,8 @@ Every output of this tool carries these labels (summary, every table, every mani
 
 Each session selects one explicit stream source (`--stream-source replay|server`). Candidates must declare the same
 source in `candidate.json`; prose is never used to infer it, and mixed-source candidates are not measured together.
+The runner also checks each candidate's machine-readable build declaration against `config/build-policy.json`; on
+Android it independently verifies minimum SDK, target SDK and packaged ABI from the frozen APK with `aapt2`.
 
 ## What a session is
 

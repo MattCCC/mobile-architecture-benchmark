@@ -17,12 +17,19 @@ function fakeRepo() {
   const d = mkdtempSync(join(tmpdir(), 'eb-repo-'));
   const design = 'test design\n';
   writeFileSync(join(d, 'design.md'), design);
+  mkdirSync(join(d, 'config'), { recursive: true });
+  writeFileSync(join(d, 'config', 'build-policy.json'), JSON.stringify({
+    schema: 'mobilebench.build-policy/1.0.0',
+    android: { minSdk: 24, targetSdk: 36, abi: 'arm64-v8a', eligibleBuildClass: 'release' },
+    ios: { deploymentTarget: '16.4', arch: 'arm64', eligibleBuildClass: 'release', descriptiveBuildClasses: ['debug'] },
+  }));
   for (const [id, pkg] of [['native', 'org.example.mobilebench.nativeapp'], ['flutter', 'org.example.mobilebench.flutter'], ['expo', 'org.example.mobilebench.expo']]) {
     mkdirSync(join(d, 'candidates', id, 'out'), { recursive: true });
     writeFileSync(join(d, 'candidates', id, 'out', 'app.apk'), `apk-${id}`);
     writeFileSync(join(d, 'candidates', id, 'candidate.json'), JSON.stringify({
       id, family: id, platforms: { android: { applicationId: pkg, launchActivity: `${pkg}/.MainActivity`,
-        streamSource: 'replay', artifacts: { apk: 'out/app.apk' } } },
+        streamSource: 'replay', benchmarkBuild: { minSdk: 24, targetSdk: 36, abi: 'arm64-v8a', buildClass: 'release' },
+        artifacts: { apk: 'out/app.apk' } } },
     }));
     const receiptDir = join(d, 'receipts', id);
     mkdirSync(receiptDir, { recursive: true });
@@ -31,7 +38,7 @@ function fakeRepo() {
     writeFileSync(join(receiptDir, 'receipt.json'), JSON.stringify({
       schema: 'mobilebench.acceptance-receipt/1.0.0', suiteId: 'mobilebench.acceptance/1', status: 'passed',
       candidateId: id, platform: 'android', artifactSha256: sha256(`apk-${id}`), designSha256: sha256(design),
-      checks: ['initial-state', 'list-geometry', 'selection-semantics', 'navigation', 'live-update',
+      checks: ['initial-state', 'build-policy', 'list-geometry', 'selection-semantics', 'navigation', 'live-update',
         'background-foreground', 'restore', 'insights', 'error-behavior'].map((check) => ({ id: check, status: 'passed' })),
       evidence: [{ path: 'evidence.txt', sha256: sha256(evidence) }],
     }));

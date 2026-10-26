@@ -19,6 +19,7 @@
       "animation": "View.animate (translateY + opacity, cubicBezier(0.42, 0, 0.58, 1), 300 ms)",
       "streamClient": "in-app replay of the bundled, golden-verified stream behind the transport interface (default); WebSocket transport not implemented yet",
       "streamSource": "replay",
+      "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
       "persistence": "file in the app files directory, temp file + rename",
       "artifacts": { "apk": "build/android/app-arm64-release.apk" },
       "sizeClassification": [
@@ -40,6 +41,7 @@
       "animation": "View.animate (translateY + opacity, cubicBezier(0.42, 0, 0.58, 1), 300 ms)",
       "streamClient": "in-app replay of the bundled, golden-verified stream behind the transport interface (default); WebSocket transport not implemented yet",
       "streamSource": "replay",
+      "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "release" },
       "persistence": "file in Application Support, atomic write",
       "buildClass": { "simulator": "release" },
       "artifacts": { "app": "build/ios/MBNativeScript.app" },

@@ -49,6 +49,7 @@
       "animation": "Animated (useNativeDriver)",
       "streamClient": "in-app replay of the bundled stream (default); React Native WebSocket with mb.source=websocket",
       "streamSource": "replay",
+      "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
       "persistence": "@react-native-async-storage/async-storage",
       "artifacts": { "apk": "build/android/app-arm64-release.apk" },
       "sizeClassification": [
@@ -72,6 +73,7 @@
       "animation": "Animated (useNativeDriver)",
       "streamClient": "in-app replay of the bundled stream (default); React Native WebSocket with mb.source=websocket",
       "streamSource": "replay",
+      "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "release" },
       "persistence": "@react-native-async-storage/async-storage",
       "artifacts": { "simulatorApp": "build/ios/MBExpo.app" }
     }

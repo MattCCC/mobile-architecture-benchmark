@@ -3,6 +3,7 @@
   "suiteId": "mobilebench.acceptance/1",
   "requiredChecks": [
     "initial-state",
+    "build-policy",
     "list-geometry",
     "selection-semantics",
     "navigation",
