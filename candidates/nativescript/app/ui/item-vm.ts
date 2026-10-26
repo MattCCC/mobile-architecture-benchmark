@@ -33,7 +33,8 @@ export class ItemVM extends Observable {
     const selected = store.selected[this.index];
     for (let o = 0; o < OPTION_KEYS.length; o += 1) {
       this.set(`${KEYS[o]}Class`, selected === o ? 'opt sel' : 'opt');
-      this.set(`${KEYS[o]}State`, selected === o ? 'selected' : 'unchecked');
+      // Options are toggles: checked / unchecked ('selected' sets the view's selected flag, not its checked state).
+      this.set(`${KEYS[o]}State`, selected === o ? 'checked' : 'unchecked');
     }
   }
 }
