@@ -271,7 +271,7 @@ async function main() {
   const log = o.planOnly ? NULL_LOG : makeLogger(join(sdir, 'harness.log.jsonl'), redactor);
   const startedAt = isoNow();
   const t0 = Date.now();
-  const ctx = { abort: null, sessionFailed: null, o, sessionId, sdir, rawDir, log, redactor, fixture: fixtureInfo(o.repo, o.profile) };
+  const ctx = { abort: null, sessionFailed: null, o, sessionId, sdir, rawDir, log, redactor, fixture: fixtureInfo(o.repo, o.profile), buildPolicy };
 
   // ---- candidates, artifacts, provenance (no device) ----
   const resolved = o.candidates.map((id) => resolveCandidate({ repo: o.repo, id, platform: o.platform, overrides: o.overrides }));
@@ -718,7 +718,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
       write(`${base}/badging.txt`, badging.stdout);
     }
     const buildClass = bad.debuggable === null ? (c.declaredBuildClass ?? 'unknown') : (bad.debuggable ? 'debug' : 'release');
-    const artifactBuildProblems = badging ? androidArtifactBuildProblems(bad, buildPolicy.value) : ['aapt2 unavailable'];
+    const artifactBuildProblems = badging ? androidArtifactBuildProblems(bad, ctx.buildPolicy.value) : ['aapt2 unavailable'];
     if (artifactBuildProblems.length > 0) {
       candidateRecords.push({ id: c.id, status: 'not-measured', reason: 'artifact-build-policy-mismatch',
         detail: artifactBuildProblems.join('; ') });
