@@ -70,6 +70,30 @@ export const METHODS = {
   },
   ...installedAndDownloadMethods(),
   ...scrollMethods(),
+  'energy.android.uid_estimated_charge/early-batterystats-power-model/1': {
+    metricId: 'energy.android.uid_estimated_charge', platform: 'android', unit: 'mAh', unitOfObservation: 'journey',
+    physicalOnly: true,
+    procedure: 'PHYSICAL DEVICE ONLY. Process-cold launch to FUI + 2 s, `dumpsys batterystats --reset`, `dumpsys battery '
+      + 'unplug`, then the seeded fling plan repeated for --energy-s seconds on List while the stream runs, then '
+      + '`dumpsys batterystats --checkin`; value = the app uid\'s "pwi,uid" entry (mAh). A MODEL-BASED ESTIMATE from the '
+      + 'device power profile (BatteryUsageStats), not measured current; `dumpsys battery reset` always restores charging state',
+    resolution: 'power-profile model (reported with 3 significant digits)', clock: 'n/a',
+    designRef: 'early-session instrument: batterystats power-model estimate (not a measured energy method)',
+  },
+  'thermal.android.skin_temp_end/early-thermalservice-hal/1': {
+    metricId: 'thermal.android.skin_temp_end', platform: 'android', unit: 'celsius', unitOfObservation: 'journey',
+    physicalOnly: true,
+    procedure: 'PHYSICAL DEVICE ONLY. Same journey as the energy estimate; value = SKIN temperature of the '
+      + '"Current temperatures from HAL" block of `dumpsys thermalservice` read at the end of the workload',
+    resolution: '0.1 °C (HAL)', clock: 'n/a', designRef: 'early-session instrument: thermal HAL skin temperature',
+  },
+  'thermal.android.skin_temp_rise/early-thermalservice-hal/1': {
+    metricId: 'thermal.android.skin_temp_rise', platform: 'android', unit: 'celsius', unitOfObservation: 'journey',
+    physicalOnly: true,
+    procedure: 'PHYSICAL DEVICE ONLY. Same journey; value = SKIN temperature at the end minus at the start of the workload '
+      + '(both from `dumpsys thermalservice` HAL temperatures)',
+    resolution: '0.1 °C (HAL)', clock: 'n/a', designRef: 'early-session instrument: thermal HAL skin temperature',
+  },
 };
 
 function installedAndDownloadMethods() {
@@ -160,6 +184,9 @@ function scrollMethods() {
   return out;
 }
 
+// Added to physical-device sessions (Android --serial).
+export const PHYSICAL_LABEL = 'PHYSICAL DEVICE (Android, --serial): early session, descriptive, no independent review; never pooled with emulator sessions';
+
 // Metrics of the early-session subset that early sessions do not collect, with the status the manifest records.
 export const NOT_COLLECTED = {
   android: [
@@ -178,6 +205,8 @@ export const NOT_COLLECTED = {
   ],
 };
 
+NOT_COLLECTED.androidPhysical = NOT_COLLECTED.android.filter((x) => !/^(energy|thermal)\./.test(x.metricId ?? ''));
+
 // Early scenarios: shortened versions of benchmark scenarios. They never share an id with a benchmark scenario.
 export const SCENARIOS = {
   'early.cold': {
@@ -195,6 +224,10 @@ export const SCENARIOS = {
   'early.scroll': {
     designRef: 'B (scroll)', cacheState: 'process-cold',
     differences: 'process-cold launch to FUI + 2 s, then a fixed seeded sequence of fling swipes on List while the stream runs; frames from shell-level SurfaceFlinger sources, not the benchmark frame driver',
+  },
+  'early.energy': {
+    designRef: 'C (energy)', cacheState: 'process-cold',
+    differences: 'physical Android device only: process-cold launch to FUI + 2 s, batterystats reset, battery unplugged (software), the seeded fling plan repeated for a fixed duration; power-model estimate and thermal HAL reads, not measured current',
   },
   'early.size': {
     designRef: 'E1-E3', cacheState: 'n/a', differences: 'one build-unit observation per frozen artifact; installed and download sizes need the driver or signing',

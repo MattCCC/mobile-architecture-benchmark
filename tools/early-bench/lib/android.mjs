@@ -139,7 +139,7 @@ export async function readSettings(dev, list) {
 export async function deviceSnapshot(dev) {
   const props = {};
   for (const p of ['ro.build.fingerprint', 'ro.build.version.sdk', 'ro.build.version.release', 'ro.product.model',
-    'ro.product.cpu.abi', 'ro.hardware.egl', 'ro.kernel.qemu.gles', 'ro.boot.qemu.gltransport']) {
+    'ro.product.cpu.abi', 'ro.product.manufacturer', 'ro.hardware.egl', 'ro.kernel.qemu.gles', 'ro.boot.qemu.gltransport']) {
     props[p] = await shOut(dev, `getprop ${p}`);
   }
   const wmSize = await shOut(dev, 'wm size');

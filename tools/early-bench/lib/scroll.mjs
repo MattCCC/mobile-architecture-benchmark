@@ -155,7 +155,7 @@ export function sfLayersFor(text, pkg) {
     const t = l.text.trim();
     const m = /^RequestedLayerState\{(.*?)(?: parentId=.*)?\}$/.exec(t);
     const name = m ? m[1] : t;
-    if (name.includes(pkg) && (/SurfaceView\[.*\(BLAST\)#\d+$/.test(name) || /^VRI-.*#\d+$/.test(name))) {
+    if (name.includes(pkg) && (/SurfaceView\[.*\(BLAST\)#\d+$/.test(name) || /^VRI-.*#\d+$/.test(name) || /^[^ ]+\/[^ ]+\$_\d+#\d+$/.test(name))) {
       out.push(name);
     }
   }

@@ -409,6 +409,52 @@ export function parseDiskstatsPackage(text, pkg) {
   };
 }
 
+// `dumpsys thermalservice`: "Thermal Status: <n>" and the "Current temperatures from HAL:" block
+// (Temperature{mValue=35.6, mType=0, mName=AP, mStatus=0}). Returns status and HAL temperatures by name.
+export function parseThermalservice(text) {
+  const ls = lines(text);
+  let status = null;
+  const hal = {};
+  let inHal = false;
+  ls.forEach((l, i) => {
+    const s = /^Thermal Status: (\d+)/.exec(l.trim());
+    if (s && status === null) {
+      status = { value: Number(s[1]), ref: ref(i + 1, l) };
+    }
+    if (/^Current temperatures from HAL:/.test(l.trim())) {
+      inHal = true;
+      return;
+    }
+    if (inHal) {
+      const m = /Temperature\{mValue=(-?[\d.]+|NaN), mType=(-?\d+), mName=([^,]+), mStatus=(\d+)\}/.exec(l);
+      if (!m) {
+        inHal = false;
+        return;
+      }
+      hal[m[3]] = { value: Number(m[1]), type: Number(m[2]), status: Number(m[4]), ref: ref(i + 1, l) };
+    }
+  });
+  return { status, hal };
+}
+
+// `dumpsys batterystats --checkin`: "9,<uid>,l,pwi,uid,<mAh>,<hide>,<screen mAh>,<smeared mAh>" = the
+// power-profile model estimate of the uid since the last reset (BatteryUsageStats). Returns null when absent.
+export function parseBatterystatsUidMah(text, uid) {
+  const ls = lines(text);
+  const i = ls.findIndex((l) => l.startsWith(`9,${uid},l,pwi,uid,`));
+  if (i < 0) {
+    return null;
+  }
+  const v = Number(ls[i].split(',')[5]);
+  return Number.isFinite(v) ? { mah: v, ref: ref(i + 1, ls[i]) } : null;
+}
+
+// `cmd package list packages -U <pkg>`: "package:<pkg> uid:<uid>".
+export function parsePackageUid(text, pkg) {
+  const m = new RegExp(`^package:${pkg.replace(/\./g, '\\.')} uid:(\\d+)`, 'm').exec(String(text ?? ''));
+  return m ? Number(m[1]) : null;
+}
+
 // `apkanalyzer apk download-size <apk>`: one integer line (bytes).
 export function parseApkanalyzerBytes(text) {
   const ls = lines(text);

@@ -6,7 +6,9 @@ import {
   frameTimelineMetrics, mergeSfPolls, parseSfLatency, planDurationMs, plausibleFrameCount, sfLatencyMetrics, sfLayersFor,
   swipePlan, swipeScript,
 } from '../lib/scroll.mjs';
-import { parseApkanalyzerBytes, parseDiskstatsPackage } from '../lib/parse.mjs';
+import {
+  parseApkanalyzerBytes, parseBatterystatsUidMah, parseDiskstatsPackage, parsePackageUid, parseThermalservice,
+} from '../lib/parse.mjs';
 
 // --- minimal protobuf encoder for synthetic traces ---
 function varint(n) {
@@ -106,6 +108,13 @@ test('SurfaceFlinger layer list: app window and SurfaceView BLAST layers', () =>
     'RequestedLayerState{VRI-org.other/org.other.Main#5 parentId=1}',
   ].join('\n');
   assert.deepEqual(sfLayersFor(text, 'org.x.app'), ['c82227e SurfaceView[org.x.app/org.x.app.MainActivity](BLAST)#116', 'VRI-org.x.app/org.x.app.MainActivity#109']);
+  // API 36 (Samsung One UI): window buffer layer "<pkg>/<activity>$_<pid>#n", SurfaceView "...]@0(BLAST)#n"
+  const oneUi = [
+    'RequestedLayerState{org.x.app/org.x.app.MainActivity$_16221#581 parentId=580}',
+    'RequestedLayerState{15137da org.x.app/org.x.app.MainActivity#580 parentId=573}',
+    'RequestedLayerState{f1927e9 SurfaceView[org.x.app/org.x.app.MainActivity]@0(BLAST)#602 parentId=601}',
+  ].join('\n');
+  assert.deepEqual(sfLayersFor(oneUi, 'org.x.app'), ['org.x.app/org.x.app.MainActivity$_16221#581', 'f1927e9 SurfaceView[org.x.app/org.x.app.MainActivity]@0(BLAST)#602']);
 });
 
 test('swipe plan is seeded and stays on screen', () => {
@@ -121,6 +130,25 @@ test('swipe plan is seeded and stays on screen', () => {
   assert.ok(a[0].y2 < a[0].y1);
   assert.equal(planDurationMs(a), a.reduce((x, s) => x + s.durationMs + 1200, 0));
   assert.match(swipeScript(a.slice(0, 1), { width: 1000, height: 2000 }), /^input swipe \d+ \d+ \d+ \d+ \d+; sleep 1\.200$/);
+});
+
+test('thermalservice HAL temperatures, batterystats uid estimate, package uid (captured on SM-A165F, API 36)', () => {
+  const th = [
+    'Thermal Status: 0', 'Cached temperatures:', '\tTemperature{mValue=31.0, mType=3, mName=SKIN, mStatus=0}', 'HAL Ready: true',
+    'Current temperatures from HAL:', '\tTemperature{mValue=35.6, mType=0, mName=AP, mStatus=0}',
+    '\tTemperature{mValue=33.0, mType=3, mName=SKIN, mStatus=0}', 'Current cooling devices from HAL:',
+  ].join('\n');
+  const t = parseThermalservice(th);
+  assert.equal(t.status.value, 0);
+  assert.equal(t.hal.SKIN.value, 33.0);
+  assert.equal(t.hal.SKIN.ref.line, 7);
+  assert.equal(t.hal.AP.value, 35.6);
+  assert.deepEqual(Object.keys(t.hal).sort(), ['AP', 'SKIN']);
+  const ck = '9,0,i,vers,36,1179864,BP4A.251205.006,BP4A.251205.006\n9,0,l,pwi,uid,9.80,1,0,0\n9,10234,l,pwi,uid,0.368,0,0.1,0\n';
+  assert.deepEqual(parseBatterystatsUidMah(ck, 10234), { mah: 0.368, ref: { line: 3, text: '9,10234,l,pwi,uid,0.368,0,0.1,0' } });
+  assert.equal(parseBatterystatsUidMah(ck, 10235), null);
+  assert.equal(parsePackageUid('package:org.x.app uid:10234\n', 'org.x.app'), 10234);
+  assert.equal(parsePackageUid('package:org.x.appz uid:1\n', 'org.x.app'), null);
 });
 
 test('diskstats per-package arrays and apkanalyzer output', () => {

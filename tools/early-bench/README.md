@@ -86,6 +86,31 @@ New-method details:
 - Energy and thermals are not collected on the emulator or simulator (no battery or thermal model); they are listed
   in `notCollected`.
 
+## Physical Android device (`--serial`)
+
+`--serial <s>` uses an already-connected physical device instead of the AVD: nothing is booted, wiped or shut down.
+The selected device must be the only adb device (shut the emulator down first: `adb -s emulator-5554 emu kill`);
+otherwise the session is `not-started: other-devices-attached`, whatever `--other-devices` says. The environment
+class is `physical-device`; its comparability key holds model, manufacturer, SDK, build fingerprint, ABI, display
+and a stable serial hash (`p-<sha256 prefix>`, the serial itself is redacted), so physical results never pool with
+emulator results. The manifest carries `physicalDevice.label` (still early and descriptive, no independent review).
+The screen is kept on with `svc power stayon usb`; `stay_on_while_plugged_in` is restored at the end. Layer names on
+API 36 / One UI differ (`<pkg>/<activity>$_<pid>#n`, `SurfaceView[...]@0(BLAST)#n`); both are recognised.
+
+Physical device only, scenario `early.energy` (`--energy-journeys`, default 3; `--energy-s`, default 60):
+cold launch to FUI + 2 s, `dumpsys thermalservice`, `dumpsys batterystats --reset`, `dumpsys battery unplug`, the
+seeded fling plan repeated for `--energy-s` s, `dumpsys batterystats --checkin`, `dumpsys thermalservice`, and
+always (finally, and again at session end) `dumpsys battery reset`.
+
+| Method | Value |
+| --- | --- |
+| `energy.android.uid_estimated_charge/early-batterystats-power-model/1` (mAh) | the app uid's `pwi,uid` checkin entry: a MODEL-BASED estimate from the device power profile, not measured current (limitations `power-model-estimate-not-measured-current`, `usb-connected-software-unplug`) |
+| `thermal.android.skin_temp_end/early-thermalservice-hal/1` (°C) | HAL `SKIN` temperature after the workload |
+| `thermal.android.skin_temp_rise/early-thermalservice-hal/1` (°C) | end minus start `SKIN` temperature of the journey |
+
+Thermal status and AP / BAT / SKIN HAL temperatures are also read at the start and end of every block of every
+scenario (`environment.device.thermalByBlock`, raw `raw/groups/<scenario>/thermal-*.txt`).
+
 Method ids have the form `<metricId>/<instrument>/<version>`; `lib/methods.mjs` holds each procedure. Early
 scenario ids never equal benchmark scenario ids, and early methods are never pooled with driver methods of the
 same metric. Metrics the early runner cannot produce (for example Android `startup.fui`, which needs Perfetto

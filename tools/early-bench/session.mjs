@@ -17,13 +17,14 @@ import {
   candidateProvenance, freezeArtifact, hashArtifact, matchesExpected, parseExpectedHash, resolveCandidate,
 } from './lib/candidates.mjs';
 import { scopeTreeSha256, sha256, sha256Entries, sha256Tree, publishablePaths, sourceIdentity } from './lib/hash.mjs';
-import { LABELS, NOT_COLLECTED, SCENARIOS } from './lib/methods.mjs';
+import { LABELS, NOT_COLLECTED, PHYSICAL_LABEL, SCENARIOS } from './lib/methods.mjs';
 import { describe } from './lib/stats.mjs';
 import { JOURNEY_SCHEMA, journeyStatus, makeObservation, notAttemptedReason, rawRef } from './lib/records.mjs';
 import {
   checkFuiPayload, crashClass, findCrash, parseAmStart, parseBadging, parseBroadcastResult, parseDexopt, parseDisplayed,
   parseFullyDrawn, parseMarkersJsonl, parseMbLogcat, parseMeminfo, parsePayload, parseProcStatus,
   parseResolveActivity, parseSimctlLaunch, streamConnectBeforeFui, parseApkanalyzerBytes, parseDiskstatsPackage,
+  parseBatterystatsUidMah, parsePackageUid, parseThermalservice,
 } from './lib/parse.mjs';
 import {
   frameTimelineMetrics, frameTimelineText, mergeSfPolls, sfSummaryLine, parseSfLatency, planDurationMs, plausibleFrameCount, sfLatencyMetrics, sfLayersFor,
@@ -63,6 +64,10 @@ options:
   --other-devices abort|wait|record   foreign emulators/simulators at session start (default abort)
   --other-devices-wait-s <s>          how long "wait" waits before aborting (default 120)
   --avd <name>             (default mobilebench_api37)
+  --serial <s>             Android: use this already-connected PHYSICAL device instead of the AVD (no boot, no wipe);
+                           every other attached device must be disconnected or shut down
+  --energy-journeys <n>    physical Android only: early.energy journeys per candidate (default 3; 0 skips)
+  --energy-s <s>           workload duration of one early.energy journey (default 60)
   --sim-name <n> --sim-runtime <id> --sim-type <id>   (default mobilebench-iphone, iOS 27.0, iPhone 17)
   --plan-only              resolve candidates, hash artifacts, print the plan and schedule; no device use
 candidate ids: <id> or <id>@debug (the debug-build variant, e.g. flutter@debug on the iOS simulator)`;
@@ -86,6 +91,7 @@ function cli(argv) {
       avd: { type: 'string', default: 'mobilebench_api37' }, 'sim-name': { type: 'string', default: 'mobilebench-iphone' },
       'sim-runtime': { type: 'string', default: 'com.apple.CoreSimulator.SimRuntime.iOS-27-0' },
       'sim-type': { type: 'string', default: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17' },
+      serial: { type: 'string' }, 'energy-journeys': { type: 'string', default: '3' }, 'energy-s': { type: 'string', default: '60' },
       'lock-acquired-at': { type: 'string' }, 'plan-only': { type: 'boolean', default: false }, help: { type: 'boolean', default: false },
     },
     strict: true,
@@ -169,6 +175,9 @@ function cli(argv) {
     simRuntime: values['sim-runtime'],
     simType: values['sim-type'],
     lockAcquiredAt: values['lock-acquired-at'] ?? null,
+    serial: values.serial ?? null,
+    energyJourneys: values.serial && values.platform === 'android' ? int('energy-journeys', 0, 100) : 0,
+    energyS: int('energy-s', 10, 600),
     planOnly: values['plan-only'],
   };
 }
@@ -177,13 +186,14 @@ function cli(argv) {
 // Android per candidate: setup (install, ART) 40; priming 10 per group; cold journey 8; warm journey 13 (its
 // tool-warmup launch included); memory journey idle + 12; 1.5 per block for R-PROC and the dexopt read.
 // Scroll journey: launch + fling plan + 3 s settle + trace pull and parsing.
-export function estimate(platform, { journeys, memoryJourneys, idleS, scrollJourneys = 0, scrollSwipes = 8 }) {
+export function estimate(platform, { journeys, memoryJourneys, idleS, scrollJourneys = 0, scrollSwipes = 8, energyJourneys = 0, energyS = 60 }) {
   const scrollS = (swipes) => swipes * 1.33 + 3;
   if (platform === 'android') {
     const groups = 2 + (memoryJourneys > 0 ? 1 : 0) + (scrollJourneys > 0 ? 1 : 0);
     const blocks = 2 * journeys + memoryJourneys + scrollJourneys;
     const perCandidate = 40 + 15 + groups * 10 + journeys * 8 + journeys * 13 + memoryJourneys * (idleS + 12)
-      + scrollJourneys * (14 + scrollS(scrollSwipes)) + blocks * 1.5;
+      + scrollJourneys * (14 + scrollS(scrollSwipes)) + (energyJourneys > 0 ? 10 : 0) + energyJourneys * (energyS + 25)
+      + (blocks + energyJourneys) * 1.5;
     return { overheadS: 150 + 60 + 20, perCandidateS: perCandidate };
   }
   const groups = 1 + (memoryJourneys > 0 ? 1 : 0) + (scrollJourneys > 0 ? 1 : 0);
@@ -203,6 +213,9 @@ function groupsFor(platform, o) {
   }
   if (o.scrollJourneys > 0 && platform === 'android') {
     g.push({ id: 'early.scroll', blocks: o.scrollJourneys });
+  }
+  if (o.energyJourneys > 0 && platform === 'android' && o.serial) {
+    g.push({ id: 'early.energy', blocks: o.energyJourneys });
   }
   return g;
 }
@@ -371,7 +384,8 @@ async function main() {
     label: LABELS[0],
     labels: LABELS,
     sessionId, runId: o.runId, platform: o.platform,
-    environmentClass: o.platform === 'android' ? 'emulator' : 'simulator',
+    environmentClass: o.platform === 'android' ? (o.serial ? 'physical-device' : 'emulator') : 'simulator',
+    ...(o.serial ? { physicalDevice: { label: PHYSICAL_LABEL } } : {}),
     status: 'running', failureReason: null, startedAt, endedAt: null, lockAcquiredAt: o.lockAcquiredAt,
     design: { sha256: o.designSha256, ref: o.designRef },
     buildPolicy: { path: buildPolicy.path, sha256: buildPolicy.sha256 },
@@ -383,7 +397,7 @@ async function main() {
     schedule: { file: 'schedule.json', sha256: sha256(readFileSync(join(sdir, 'schedule.json'))) },
     launchConfigBase: { 'mb.journeyMode': '1', 'mb.profile': o.profile },
     watchdog: { softMin: o.watchdogMin, hardStop: 'caller (lock wrapper): SIGTERM, then SIGKILL after a grace period' },
-    plan, fixture: ctx.fixture, notCollected: NOT_COLLECTED[o.platform],
+    plan, fixture: ctx.fixture, notCollected: o.serial ? NOT_COLLECTED.androidPhysical : NOT_COLLECTED[o.platform],
     candidates: candidateRecords, environment: null, device: null, resets: {}, counts: null, tools: null,
   };
   const manifestPath = join(sdir, 'manifest.json');
@@ -596,6 +610,36 @@ const SCROLL_METRICS = ['frame_count', 'janky_frames_pct', 'frame_time_p50', 'fr
 const A_SCROLL_SF = SCROLL_METRICS.map((m) => `frame.android.scroll_${m}/early-sf-latency/1`);
 const A_SCROLL_FT = SCROLL_METRICS.map((m) => `frame.android.scroll_${m}/early-perfetto-frametimeline/1`);
 const A_SCROLL = [...A_SCROLL_SF, ...A_SCROLL_FT];
+const A_ENERGY = ['energy.android.uid_estimated_charge/early-batterystats-power-model/1',
+  'thermal.android.skin_temp_end/early-thermalservice-hal/1', 'thermal.android.skin_temp_rise/early-thermalservice-hal/1'];
+
+// Energy-journey observations: power-model estimate of the app uid and the HAL skin temperature (end, rise).
+export function energyObservations(base, en, limitations = []) {
+  const out = [];
+  const lim = [...limitations, 'power-model-estimate-not-measured-current', 'usb-connected-software-unplug'];
+  if (en.swipesExit !== 0) {
+    return failAll(base, A_ENERGY, { class: 'harness-error', message: `workload script exit ${en.swipesExit}` });
+  }
+  if (!en.est) {
+    out.push(makeObservation(base, { methodId: A_ENERGY[0], status: 'failed', failure: { class: 'instrument-error', message: en.uid === null ? 'app uid not resolved' : 'no pwi,uid entry for the app uid' } }));
+  } else {
+    out.push(makeObservation(base, { methodId: A_ENERGY[0], status: 'measured', value: en.est.mah, limitations: lim, rawRefs: [rawRef(en.checkinFile, en.est.ref)] }));
+  }
+  const s0 = en.t0?.hal?.SKIN;
+  const s1 = en.t1?.hal?.SKIN;
+  if (s1 && Number.isFinite(s1.value)) {
+    out.push(makeObservation(base, { methodId: A_ENERGY[1], status: 'measured', value: s1.value, limitations, rawRefs: [rawRef(en.t1.file, s1.ref)] }));
+  } else {
+    out.push(makeObservation(base, { methodId: A_ENERGY[1], status: 'unavailable', reason: 'thermal-hal-has-no-SKIN-sensor' }));
+  }
+  if (s0 && s1 && Number.isFinite(s0.value) && Number.isFinite(s1.value)) {
+    out.push(makeObservation(base, { methodId: A_ENERGY[2], status: 'measured', value: Math.round((s1.value - s0.value) * 10) / 10, limitations,
+      rawRefs: [rawRef(en.t0.file, s0.ref), rawRef(en.t1.file, s1.ref)] }));
+  } else {
+    out.push(makeObservation(base, { methodId: A_ENERGY[2], status: 'unavailable', reason: 'thermal-hal-has-no-SKIN-sensor' }));
+  }
+  return out;
+}
 
 // Five scroll observations of one source from its metrics; a source that fails plausibility is failed.
 export function scrollObservations(base, ids, m, ref, { windowNs, refreshNs, limitations = [] }) {
@@ -651,7 +695,12 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     redactor.add(d.serial, hashedId('serial', d.serial, ctx.sessionId));
   }
   write('setup/adb-devices-start.txt', before.raw);
-  let serial = before.devices.find((d) => d.avd === o.avd && d.state === 'device')?.serial ?? null;
+  const physical = Boolean(o.serial);
+  let serial = physical ? (before.devices.find((d) => d.serial === o.serial && d.state === 'device')?.serial ?? null)
+    : (before.devices.find((d) => d.avd === o.avd && d.state === 'device')?.serial ?? null);
+  if (physical && !serial) {
+    return { notStarted: 'physical-device-not-connected (--serial not in `adb devices` with state device)', planned: 0, ran: 0, tools };
+  }
   const probe = async () => {
     const list = await android.listEmulators(adbPath);
     const foreign = list.devices.filter((d) => d.serial !== serial);
@@ -660,6 +709,9 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
   };
   const other = await checkOtherDevices(o, probe, log);
   const otherDevicesStart = { adb: other.adb, simulatorsBooted: other.simulatorsBooted, policy: o.otherDevices };
+  if (physical && other.adb > 0) {
+    return { notStarted: `other-devices-attached (${other.adb} other adb device(s); a physical-device session needs the selected device alone: shut the emulator down / disconnect)`, planned: 0, ran: 0, tools };
+  }
   if (!other.proceed) {
     return { notStarted: `other-devices-running (adb ${other.adb}, simulators ${other.simulatorsBooted})`, planned: 0, ran: 0, tools };
   }
@@ -695,9 +747,9 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
   }
   const dev = android.makeAdb(adbPath, serial);
   const deviceKey = hashedId('d', serial, ctx.sessionId);
-  const cmdline = bootedBySession ? null : await android.emulatorCmdlineFlags(o.avd);
-  const gpuMode = bootedBySession ? 'host' : (cmdline?.gpu ?? 'unknown');
-  const effective = bootedBySession
+  const cmdline = bootedBySession || physical ? null : await android.emulatorCmdlineFlags(o.avd);
+  const gpuMode = physical ? 'device-gpu' : (bootedBySession ? 'host' : (cmdline?.gpu ?? 'unknown'));
+  const effective = physical ? { cores: null, memoryMb: null, source: 'physical device (see identity.cpuCount, state.memTotalKb)' } : bootedBySession
     ? { cores: intOrNull(bootFlags[bootFlags.indexOf('-cores') + 1]), memoryMb: intOrNull(bootFlags[bootFlags.indexOf('-memory') + 1]), source: 'boot flags of this session' }
     : { cores: intOrNull(cmdline?.cores) ?? intOrNull(avdCfg?.['hw.cpu.ncore']), memoryMb: intOrNull(cmdline?.memory) ?? intOrNull(avdCfg?.['hw.ramSize']),
       source: cmdline?.cores || cmdline?.memory ? 'emulator command line (missing flags from config.ini)' : 'AVD config.ini (no -cores / -memory on the command line)' };
@@ -705,12 +757,19 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
   // device preparation (recorded and restored): screen on and awake for the whole session
   const stayOnBefore = (await dev.sh('settings get global stay_on_while_plugged_in', { timeoutMs: 15000 })).stdout.trim();
   const prep = [];
-  for (const cmd of ['svc power stayon true', 'input keyevent KEYCODE_WAKEUP', 'wm dismiss-keyguard']) {
+  for (const cmd of [physical ? 'svc power stayon usb' : 'svc power stayon true', 'input keyevent KEYCODE_WAKEUP', 'wm dismiss-keyguard']) {
     const r = await dev.sh(cmd, { timeoutMs: 15000 });
     prep.push({ cmd, code: r.code });
   }
   const devStart = await android.deviceSnapshot(dev);
-  const comparability = {
+  const comparability = physical ? {
+    environmentClass: 'physical-device', platform: 'android',
+    model: devStart.identity.props['ro.product.model'], manufacturer: devStart.identity.props['ro.product.manufacturer'],
+    sdk: devStart.identity.props['ro.build.version.sdk'], fingerprint: devStart.identity.props['ro.build.fingerprint'],
+    abi: devStart.identity.props['ro.product.cpu.abi'], serialHash: `p-${sha256(`mobilebench-serial|${serial}`).slice(0, 12)}`,
+    deviceCpuCount: devStart.identity.cpuCount, wmSize: devStart.identity.wmSize, wmDensity: devStart.identity.wmDensity,
+    deviceSettings: devStart.state.keySettings, host: hostStart.identity,
+  } : {
     environmentClass: 'emulator', platform: 'android', avd: o.avd, avdHardware: avdCfg, gpuMode,
     emulatorCores: effective.cores, emulatorMemoryMb: effective.memoryMb, deviceCpuCount: devStart.identity.cpuCount,
     emulatorVersion: tools.emulator, fingerprint: devStart.identity.props['ro.build.fingerprint'],
@@ -718,11 +777,13 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     host: hostStart.identity,
   };
   const env = {
-    key: environmentKey(comparability), class: 'emulator', platform: 'android', deviceKey,
+    key: environmentKey(comparability), class: physical ? 'physical-device' : 'emulator', platform: 'android', deviceKey,
+    ...(physical ? { physicalDevice: { label: PHYSICAL_LABEL, model: comparability.model, manufacturer: comparability.manufacturer, sdk: comparability.sdk } } : {}),
     limitations: envLimitationsFromHost(hostStart, otherDevicesStart),
     comparabilityKey: comparability, deviceSettings: devStart.state.keySettings,
     host: { key: hostKey(hostStart.identity), identity: hostStart.identity, start: hostStart.state, end: null },
-    device: { identity: devStart.identity, start: devStart.state, end: null, avdHardware: avdCfg, emulatorVersion: tools.emulator,
+    device: { identity: devStart.identity, start: devStart.state, end: null, avdHardware: physical ? null : avdCfg,
+      emulatorVersion: physical ? null : tools.emulator, physical,
       gpuMode, gpuModeSource: bootedBySession ? 'boot flag' : 'emulator command line', effectiveCoresMemory: effective,
       bootedBySession, bootFlags, emulatorCmdline: cmdline, prep, stayOnBefore, layoutReference: null,
       layoutReferenceReason: 'calibration app not built yet (no h_ref)' },
@@ -979,7 +1040,52 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
       sc.ft = { ...rest, summaryRef: { file: ftW.file, line: t.summaryLine, text: t.summary } };
     }
   };
-  const launch = async (j, { mode, memory = false, scroll = false }) => {
+  // ---- early.energy (physical device only): power-model estimate and thermal HAL over a fixed workload ----
+  const thermalByBlock = [];
+  const thermalSnap = async (rel, meta) => {
+    if (!physical) {
+      return null;
+    }
+    const w = write(rel, (await dev.sh('dumpsys thermalservice', { timeoutMs: 30000 })).stdout);
+    const t = parseThermalservice(w.text);
+    thermalByBlock.push({ ...meta, file: w.file, status: t.status?.value ?? null, skinC: t.hal.SKIN?.value ?? null, apC: t.hal.AP?.value ?? null, batC: t.hal.BAT?.value ?? null });
+    return { ...t, file: w.file };
+  };
+  const energyPlan = swipePlan(o.seed, Math.max(1, Math.round((o.energyS * 1000) / (planDurationMs(plan) / plan.length))));
+  const energyPhase = async (j, pkg, jdir) => {
+    const en = { workloadS: o.energyS, swipes: energyPlan.length };
+    j.energy = en;
+    en.uid = parsePackageUid((await dev.sh(`cmd package list packages -U ${pkg}`, { timeoutMs: 15000 })).stdout.replace(/\r/g, ''), pkg);
+    en.t0 = await thermalSnap(`${jdir}/thermal-start.txt`, { journeyId: j.journeyId, phase: 'energy-start' });
+    const steps = [];
+    try {
+      const r1 = await dev.sh('dumpsys batterystats --reset', { timeoutMs: 30000 });
+      const r2 = await dev.sh('dumpsys battery unplug', { timeoutMs: 15000 });
+      steps.push(`batterystats --reset exit ${r1.code}: ${r1.stdout.trim()}`, `battery unplug exit ${r2.code}`);
+      const t0 = Date.now();
+      const script = swipeScript(energyPlan, screen);
+      write(`${jdir}/energy-swipes.sh`, `${script}\n`);
+      const sw = await dev.sh(script, { timeoutMs: o.energyS * 1000 + 120000 });
+      const left = o.energyS * 1000 - (Date.now() - t0);
+      if (left > 0) {
+        await sleep(left);
+      }
+      en.swipesExit = sw.code;
+      en.elapsedMs = Date.now() - t0;
+      const ck = await dev.sh('dumpsys batterystats --checkin', { timeoutMs: 60000 });
+      const ckW = write(`${jdir}/batterystats-checkin.txt`, ck.stdout);
+      j.rawFiles.push(ckW.file);
+      en.checkinFile = ckW.file;
+      en.est = en.uid === null ? null : parseBatterystatsUidMah(ckW.text, en.uid);
+      en.t1 = await thermalSnap(`${jdir}/thermal-end.txt`, { journeyId: j.journeyId, phase: 'energy-end' });
+    } finally {
+      const r3 = await dev.sh('dumpsys battery reset', { timeoutMs: 15000 });
+      steps.push(`battery reset exit ${r3.code}`);
+      en.batteryReset = r3.code === 0;
+      j.rawFiles.push(write(`${jdir}/energy-steps.txt`, `${steps.join('\n')}\n`).file);
+    }
+  };
+  const launch = async (j, { mode, memory = false, scroll = false, energy = false }) => {
     const x = C[j.candidateId];
     const pkg = x.c.packageName;
     const jdir = `journeys/${j.journeyId}`;
@@ -1012,6 +1118,9 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
     await sleep(2000);
     if (scroll && j.role === 'measured') {
       await scrollPhase(j, pkg, jdir);
+    }
+    if (energy && j.role === 'measured') {
+      await energyPhase(j, pkg, jdir);
     }
     if (memory) {
       await sleep(o.idleS * 1000);
@@ -1102,6 +1211,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
       for (let attempt = 1; attempt <= 2; attempt += 1) {
         const runList = blockJourneys.filter((p) => rerunIds === null || rerunIds.includes(p.candidateId)).map((p) => ({ ...p, attempt, journeyId: attempt === 1 ? p.journeyId : `${p.journeyId}.a2` }));
         if (!ctx.abort) {
+          await thermalSnap(`groups/${g.id}/thermal-${tag}-a${attempt}-start.txt`, { group: g.id, block: tag, attempt, phase: 'block-start' });
           await forceStopAll(); // R-PROC at the start of every block (driver invocation)
         }
         for (const j of runList) {
@@ -1116,7 +1226,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
             await launch(tw, { mode: 'cold' });
             results.push(tw);
           }
-          await launch(j, { mode, memory: g.id === 'early.idle-memory', scroll: g.id === 'early.scroll' });
+          await launch(j, { mode, memory: g.id === 'early.idle-memory', scroll: g.id === 'early.scroll', energy: g.id === 'early.energy' });
           ran += 1;
           results.push(j);
           progress({ planned: planned.length, ran, current: j.journeyId });
@@ -1124,6 +1234,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
         if (ctx.abort) {
           break;
         }
+        await thermalSnap(`groups/${g.id}/thermal-${tag}-a${attempt}-end.txt`, { group: g.id, block: tag, attempt, phase: 'block-end' });
         const artAfter = {};
         const changed = [];
         for (const id of ids) {
@@ -1161,6 +1272,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
   for (const p of planned.filter((x) => !seen.has(x.journeyId))) {
     results.push(markNotRun({ ...p }, ctx.abort ?? 'unknown'));
   }
+  env.device.thermalByBlock = physical ? thermalByBlock : null;
   return finish({ planned: planned.length, ran, results, C, builds });
 }
 
@@ -1205,16 +1317,21 @@ async function forcedDiskstats(dev, write) {
     return { ok: false, reason: 'diskstats-job-not-found' };
   }
   const m0 = await mtime();
-  const rr = await dev.sh(`cmd jobscheduler run -f android ${job}`, { timeoutMs: 30000 });
   let m1 = m0;
-  const deadline = Date.now() + 90000;
-  while (m1 === m0 && Date.now() < deadline) {
-    await sleep(2000);
-    m1 = await mtime();
+  const log = [];
+  // a forced run is sometimes dropped (seen on a physical API 36 device): up to 3 runs, 45 s each
+  for (let attempt = 1; attempt <= 3 && m1 === m0; attempt += 1) {
+    const rr = await dev.sh(`cmd jobscheduler run -f android ${job}`, { timeoutMs: 30000 });
+    log.push(`run ${attempt}: ${rr.stdout.trim()} (exit ${rr.code})`);
+    const deadline = Date.now() + 45000;
+    while (m1 === m0 && Date.now() < deadline) {
+      await sleep(2000);
+      m1 = await mtime();
+    }
   }
-  write('diskstats-job.txt', `job ${job}\nrun: ${rr.stdout.trim()} (exit ${rr.code})\ncache mtime before ${m0 || 'absent'} after ${m1 || 'absent'}\n`);
+  write('diskstats-job.txt', `job ${job}\n${log.join('\n')}\ncache mtime before ${m0 || 'absent'} after ${m1 || 'absent'}\n`);
   if (m1 === m0 || !m1) {
-    return { ok: false, reason: 'diskstats-cache-not-refreshed-within-90s' };
+    return { ok: false, reason: 'diskstats-cache-not-refreshed (3 forced runs x 45 s)' };
   }
   const d = await dev.sh('dumpsys diskstats', { timeoutMs: 60000 });
   const w = write('diskstats.txt', d.stdout);
@@ -1273,6 +1390,10 @@ async function applyArt(dev, pkg, write, readDexopt, dexoptRel) {
 async function finishAndroid({ ctx, env, dev, adbPath, bootedBySession, serial, resets, candidateRecords, allObs, journeysOut, tools, mbStream, stayOnBefore, planned, ran, results, C, builds }) {
   const { log } = ctx;
   await mbStream.stop();
+  if (env.device.physical) {
+    // safety net: the energy phase restores the charging state itself; never leave the device "unplugged"
+    env.device.batteryResetAtEnd = (await dev.sh('dumpsys battery reset', { timeoutMs: 15000 })).code === 0;
+  }
   for (const r of candidateRecords.filter((x) => x.status === 'included')) {
     await dev.sh(`am force-stop ${r.packageName}`);
   }
@@ -1314,7 +1435,8 @@ async function finishAndroid({ ctx, env, dev, adbPath, bootedBySession, serial, 
       journeysOut.push(journeyRecord(ctx, env, x.c, x.buildClass, j));
       continue;
     }
-    const methods = j.scenarioId === 'early.idle-memory' ? A_MEM : (j.scenarioId === 'early.scroll' ? A_SCROLL : A_START);
+    const methods = j.scenarioId === 'early.idle-memory' ? A_MEM : (j.scenarioId === 'early.scroll' ? A_SCROLL
+      : (j.scenarioId === 'early.energy' ? A_ENERGY : A_START));
     if (j.notRun) {
       notAttempted += 1;
       journeysOut.push(journeyRecord(ctx, env, x.c, x.buildClass, j));
@@ -1349,7 +1471,9 @@ async function finishAndroid({ ctx, env, dev, adbPath, bootedBySession, serial, 
       continue;
     }
     const lim = j.fui ? [] : ['fui-marker-missing'];
-    if (methods === A_SCROLL) {
+    if (methods === A_ENERGY) {
+      allObs.push(...(j.energy ? energyObservations(base, j.energy, lim) : failAll(base, A_ENERGY, { class: 'harness-error', message: 'energy phase did not run' })));
+    } else if (methods === A_SCROLL) {
       const sc = j.scroll;
       const windowNs = (sc?.windowMs ?? 0) * 1e6;
       const best = (sc?.sf ?? []).slice().sort((a, b) => b.metrics.frames - a.metrics.frames)[0] ?? null;
