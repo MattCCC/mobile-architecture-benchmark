@@ -6,7 +6,7 @@ feature. All candidates are measured with one shared method, the same determinis
 acceptance checks.
 
 > **Status: work in progress.** All eight candidates build and pass black-box acceptance on the Android emulator
-> and the iOS simulator; no results are published yet (see [Current status](#current-status)). Emulator and
+> and the iOS simulator; first descriptive early results are below (see [Current status](#current-status)). Emulator and
 > simulator sessions are descriptive and not representative of physical devices.
 
 ## What is being compared
@@ -125,8 +125,29 @@ Each session writes `results/local/sessions/<sessionId>/` containing:
 `combine.mjs` reads those files and writes the **human-readable report** (`summary.md`): per-session medians and
 pooled N / median / p95 / min / max for each candidate and metric, exact artifact sizes, debug builds in their own
 section, and a shared-session view for comparing candidates side by side. The output is deterministic, and
-values are pooled only when the method, environment, artifact and fixture all match. No session results are
-committed to this repository yet.
+values are pooled only when the method, environment, artifact and fixture all match. The first combined summary is
+committed in `results/early-2026-10-26/`.
+
+## First results (2026-10-26, early sessions)
+
+Descriptive only: Android emulator and iOS simulator on one Apple silicon host, not physical devices, and not a
+ranking. Medians of 10 (Android) or 10–20 (iOS) process-cold runs per candidate. Full tables with p95, min/max,
+warm start, sizes, artifact hashes and traceability: [results/early-2026-10-26/summary.md](results/early-2026-10-26/summary.md).
+
+| Candidate | Android first frame | Android fully drawn | Android idle PSS | iOS first usable UI | iOS idle footprint |
+| --- | --- | --- | --- | --- | --- |
+| native | 160.5 ms | 163.0 ms | 23.6 MiB | 373.9 ms | 18.0 MiB |
+| island-flutter | 154.5 ms | 156.0 ms | 23.9 MiB | 431.1 ms (debug) | 19.0 MiB (debug) |
+| island-rn | 164.5 ms | 166.0 ms | 26.9 MiB | 395.2 ms | 18.8 MiB |
+| island-nativescript | 160.5 ms | 162.5 ms | 46.7 MiB | 387.0 ms | 18.6 MiB |
+| expo | 151.5 ms | 348.5 ms | 107.0 MiB | 1677.9 ms | 74.1 MiB |
+| repack | 145.0 ms | 369.5 ms | 97.0 MiB | 447.9 ms | 70.1 MiB |
+| nativescript | 320.5 ms | 322.5 ms | 78.0 MiB | not measured¹ | not measured¹ |
+| flutter | 667.0 ms | 667.0 ms | 66.7 MiB | not measured¹ (debug) | not measured¹ (debug) |
+
+¹ The iOS builds of `nativescript` and `flutter` do not emit the `proc.anchor` and `mem` markers yet. Island
+numbers measure the native shell at startup (islands load lazily on first open). iOS debug builds are reported
+separately and are not comparable with release builds.
 
 ## What is measured today
 
@@ -151,7 +172,7 @@ candidate/platform cell becomes rankable only after accepted independent review 
 | Acceptance | Black-box drivers for Android and iOS (`tools/acceptance`); all 8 candidates pass all checks on both platforms, with `instrumentation-overhead` waived (design §6.7), which keeps results descriptive |
 | Benchmark runner | Implemented (`tools/early-bench`); a dry run admits all 8 candidates on both platforms |
 | Reference devices | Android AVD `mobilebench_api37` (API 37) and iOS simulator `mobilebench-iphone` (iPhone 17, iOS 27.0), created locally |
-| Published results | None yet; the first early sessions are next |
+| Published results | First early sessions (2026-10-26), see [First results](#first-results-2026-10-26-early-sessions) |
 
 Next steps: early sessions on both platforms and their `summary.md` tables; then the shared BenchKit with its
 A/B overhead experiment and physical devices, which are needed for eligible (rankable) results.
