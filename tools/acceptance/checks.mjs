@@ -139,7 +139,13 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
   const rowIndices = (ui) => {
     const list = listBounds(ui);
     const visible = (n) => !list || (n.bounds.b > list.t + 1 && n.bounds.t < list.b - 1 && n.bounds.b > n.bounds.t);
-    return ui.nodes.filter((n) => /^mb\.row\.\d+\.label$/.test(n.id) && visible(n)).map((n) => Number(n.id.split('.')[2]));
+    const labels = ui.nodes.filter((n) => /^mb\.row\.\d+\.label$/.test(n.id) && visible(n));
+    // Off-screen UIKit cells keep their labels, clipped to the list edge: when the toolkit exposes row elements, a
+    // label counts only inside a non-empty row element of the same index.
+    const inRow = labels.filter((l) => ui.nodes.some((n) => n.id === l.id.slice(0, -'.label'.length) && n.bounds.b - n.bounds.t > 0
+      && n.bounds.t <= l.bounds.t && n.bounds.b >= l.bounds.b));
+    // An id can appear on an element and on its static-text child: one index per row.
+    return [...new Set((inRow.length > 0 ? inRow : labels).map((n) => Number(n.id.split('.')[2])))];
   };
 
   /** Row slots: the row elements when the toolkit exposes them, else derived from the label pitch (rows are
@@ -147,9 +153,10 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
   const rowSlots = (ui, list) => {
     const labels = rowIndices(ui).map((i) => ({ i, label: ui.find(`mb.row.${i}.label`) })).sort((a, b) => a.label.bounds.t - b.label.bounds.t);
     const rows = labels.map(({ i, label }) => {
-      const row = ui.find(`mb.row.${i}`);
-      const contains = row && row.bounds.t <= label.bounds.t && row.bounds.b >= label.bounds.b;
-      return { i, bounds: contains ? row.bounds : null, label };
+      // The row element that contains its label (placeholders for not-yet-created cells share the id).
+      const row = ui.nodes.find((n) => n.id === `mb.row.${i}` && n.bounds.b - n.bounds.t > 0
+        && n.bounds.t <= label.bounds.t && n.bounds.b >= label.bounds.b);
+      return { i, bounds: row ? row.bounds : null, label };
     });
     if (rows.every((r) => r.bounds)) return rows;
     const offset = rows[0].label.bounds.t - list.t;
@@ -228,10 +235,13 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
   });
 
   await runCheck('list-geometry', async () => {
-    need(ui.find('mb.list'), 'mb.list');
-    const list = { bounds: listBounds(ui) };
+    // Its own dump once the list has settled (the first one is taken right at FUI, before every cell is laid out).
+    await sleep(1000);
+    const g = await shown('list');
+    need(g.find('mb.list'), 'mb.list');
+    const list = { bounds: listBounds(g) };
     const extent = device.rowExtent;
-    const rows = rowSlots(ui, list.bounds).map((r) => ({ id: `mb.row.${r.i}`, bounds: r.bounds }));
+    const rows = rowSlots(g, list.bounds).map((r) => ({ id: `mb.row.${r.i}`, bounds: r.bounds }));
     // Dumped bounds may be clipped to the viewport: a row touching a list edge may be partly visible.
     const inside = (n) => n.bounds.t >= list.bounds.t - 1 && n.bounds.b <= list.bounds.b + 1;
     const atEdge = (n) => Math.abs(n.bounds.t - list.bounds.t) <= 1 || Math.abs(n.bounds.b - list.bounds.b) <= 1;
