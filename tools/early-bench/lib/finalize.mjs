@@ -202,11 +202,13 @@ export function finalizeAndroidSession({ sdir, repo, avd = 'mobilebench_api37', 
         buildInputSha256: manifest.source?.buildInputSha256?.[id] ?? null, lockfiles, candidateJson: { path: cjPath, sha256: cjV.sha256AtStart } },
       buildInputs: rc.buildInputs, versions: rc.versions, art: { after: { summary: artDex.summary, file: `raw/setup/${id}/art-dexopt.txt` } },
       artStateReadable: artDex.summary !== null, streamSource: rc.streamSource, streamSourceBasis: rc.streamSourceBasis,
+      instrumentationId: rc.instrumentationId,
       installVerified, limitations: rc.limitations,
     });
     const sizeBase = {
       sessionId, runId: manifest.runId, buildId, candidateId: id, platform: 'android', scenarioId: 'early.size',
       environmentRef: env.key, environmentClass: 'emulator', deviceKey: env.deviceKey, streamSource: rc.streamSource, fixture,
+      instrumentationId: rc.instrumentationId,
       limitations: [...rc.limitations, ...envLimitations, ...(rc.streamSource === 'replay' ? ['bundles-replay-stream'] : [])],
     };
     for (const s of sizes) {
@@ -316,7 +318,7 @@ export function finalizeAndroidSession({ sdir, repo, avd = 'mobilebench_api37', 
     const base = {
       sessionId, runId: manifest.runId, journeyId: j.journeyId, journeyIndex: j.journeyIndex ?? null, block: j.block ?? null, position: j.position ?? null,
       attempt: 1, candidateId: x.id, platform: 'android', scenarioId: j.scenarioId, environmentRef: env.key, environmentClass: 'emulator',
-      deviceKey: env.deviceKey, build, streamSource: x.rc.streamSource, fixture,
+      deviceKey: env.deviceKey, build, streamSource: x.rc.streamSource, instrumentationId: x.rc.instrumentationId, fixture,
       limitations: [...x.rc.limitations, ...envLimitations, ...(x.rc.streamSource === 'replay' && memory ? ['bundles-replay-stream'] : []), ...(artUnknown ? ['art-state-unknown'] : [])],
     };
     let failure = j.failure ?? null;
@@ -341,7 +343,8 @@ export function finalizeAndroidSession({ sdir, repo, avd = 'mobilebench_api37', 
       scenarioId: j.scenarioId, designScenarioRef: SCENARIOS[j.scenarioId]?.designRef ?? null, bootSession: 1, blockSet: j.blockSet ?? null,
       block: j.block ?? null, position: j.position ?? null, journeyIndex: j.journeyIndex ?? null, previousCandidateId: j.previousCandidateId ?? null,
       attempt: 1, role: j.role, forJourneyId: j.forJourneyId ?? null, resetProcedures: j.resetProcedures ?? ['R-PROC'], buildClass: x.buildClass,
-      environmentClass: 'emulator', environmentRef: env.key, streamSource: x.rc.streamSource, fixture, uiGeneration: null, deviceSettings: null,
+      environmentClass: 'emulator', environmentRef: env.key, streamSource: x.rc.streamSource,
+      instrumentationId: x.rc.instrumentationId, fixture, uiGeneration: null, deviceSettings: null,
       startedAt: null, startedAtUpperBound: j.startedAtUpperBound ?? null, endedAt: j.endedAt ?? null, timeSource: 'raw file modification times (post-hoc)',
       status: j.notRun ? j.journeyStatus : (j.interrupted ? 'interrupted' : (failure ? 'failed' : 'completed')),
       failure: j.notRun ? null : failure, notAttemptedReason: j.notRun ? j.notRunReason : null,

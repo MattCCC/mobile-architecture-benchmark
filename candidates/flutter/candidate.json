@@ -41,6 +41,7 @@
       "streamClient": "in-app replay of the bundled stream (default); a dart:io WebSocket source plugs into the same FrameSource interface (not implemented yet)",
       "streamSource": "replay",
       "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
+      "instrumentationId": "flutter-local-interim/1",
       "persistence": "dart:io file in Context.getFilesDir(), temp file + atomic rename",
       "buildClass": "release",
       "artifacts": {
@@ -68,6 +69,7 @@
       "streamClient": "in-app replay of the bundled stream (default); dart:io WebSocket planned",
       "streamSource": "replay",
       "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "debug" },
+      "instrumentationId": "flutter-local-interim/1",
       "persistence": "dart:io file in Library/Application Support, temp file + atomic rename",
       "buildClass": { "simulator": "debug", "device": "release" },
       "buildClassNote": "flutter_tools 3.47.7 builds only debug for simulators (release: 'RELEASE mode is not supported for simulators.')",

@@ -68,7 +68,7 @@ test('summary carries the labels, separates debug builds and is deterministic', 
   }
   assert.ok(text.indexOf('## Debug and unclassified builds') > text.indexOf('## Release builds'));
   assert.ok(text.includes('flutter-semantics-forced-on-simulator'));
-  assert.ok(text.includes('| early.cold | `startup.ttff/early-am-start-w/1` | env-1 | replay, 1.0.0/representative | native | aaa | 1 | 2 | 1.5 ms |'));
+  assert.ok(text.includes('| early.cold | `startup.ttff/early-am-start-w/1` | env-1 | replay, 1.0.0/representative | unknown | native | aaa | 1 | 2 | 1.5 ms |'));
   assert.ok(text.includes('`startup.ttff/early-am-start-w/1`'));
   assert.equal(text, renderSummary(combine([s1, s2])));
   const ls = text.split('\n');

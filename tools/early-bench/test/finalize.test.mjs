@@ -23,7 +23,7 @@ function fakeSession() {
   const repo = join(d, 'repo');
   const s = join(d, 's-x-android-ab12');
   const cj = JSON.stringify({ id: 'native', family: 'native', platforms: { android: { applicationId: PKG, launchActivity: `${PKG}/.MainActivity`,
-    streamClient: 'in-app replay', streamSource: 'replay', artifacts: { apk: 'out/app.apk' } } } });
+    streamClient: 'in-app replay', streamSource: 'replay', instrumentationId: 'test-benchkit/1', artifacts: { apk: 'out/app.apk' } } } });
   const fx = JSON.stringify({ fixtureVersion: '1.0.0', profile: 'representative', selection: Array.from({ length: 50 }, (_, i) => i) });
   put(repo, 'candidates/native/candidate.json', cj);
   put(repo, 'fixtures/v1/representative.json', fx);

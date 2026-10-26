@@ -15,6 +15,9 @@ Each session selects one explicit stream source (`--stream-source replay|server`
 source in `candidate.json`; prose is never used to infer it, and mixed-source candidates are not measured together.
 The runner also checks each candidate's machine-readable build declaration against `config/build-policy.json`; on
 Android it independently verifies minimum SDK, target SDK and packaged ABI from the frozen APK with `aapt2`.
+Instrumentation identity is also a comparison boundary. Candidate-local and shared implementations receive different
+ids, so the shared-session table never places their timings side by side. A shared id requires an acceptance receipt
+containing the instrumentation-overhead check.
 
 ## What a session is
 

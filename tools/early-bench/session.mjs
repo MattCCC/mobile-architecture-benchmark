@@ -484,6 +484,7 @@ function journeyBase(ctx, env, c, build, j) {
     position: j.position ?? null, attempt: j.attempt ?? 1, candidateId: c.id, platform: ctx.o.platform, scenarioId: j.scenarioId,
     environmentRef: env.key, environmentClass: env.class, deviceKey: env.deviceKey, build,
     streamSource: c.streamSource, fixture: ctx.fixture,
+    instrumentationId: c.instrumentationId,
     limitations: [...c.limitations, ...(env.limitations ?? []), ...(replayLimited ? ['bundles-replay-stream'] : []), ...(j.limitations ?? [])],
   };
 }
@@ -500,7 +501,8 @@ function journeyRecord(ctx, env, c, buildClass, j) {
     bootSession: 1, blockSet: j.blockSet ?? null, block: j.block ?? null, position: j.position ?? null, journeyIndex: j.journeyIndex ?? null,
     previousCandidateId: j.previousCandidateId ?? null, attempt: j.attempt ?? 1, role: j.role, forJourneyId: j.forJourneyId ?? null,
     resetProcedures: j.resetProcedures ?? [],
-    buildClass, environmentClass: env.class, environmentRef: env.key, streamSource: c.streamSource, fixture: ctx.fixture,
+    buildClass, environmentClass: env.class, environmentRef: env.key, streamSource: c.streamSource,
+    instrumentationId: c.instrumentationId, fixture: ctx.fixture,
     uiGeneration: null, deviceSettings: env.deviceSettings ?? null,
     startedAt: j.startedAt ?? null, endedAt: j.endedAt ?? null,
     status: journeyStatus(j), failure: j.notRun ? null : (j.failure ?? null), notAttemptedReason: j.notRun ? j.notRunReason : null,
@@ -754,7 +756,7 @@ async function runAndroid(ctx, { selected, builds, schedule, sid4, hostStart, pr
       buildInputs: c.buildInputs,
       versions: c.versions, candidateJson: c.candidateJson, overridesApplied: c.overridesApplied, art,
       artStateReadable: art.after.summary !== null,
-      streamSource: c.streamSource, streamSourceBasis: c.streamSourceBasis, verified: c.verified,
+      streamSource: c.streamSource, streamSourceBasis: c.streamSourceBasis, instrumentationId: c.instrumentationId, verified: c.verified,
       installVerified, limitations: c.limitations,
     });
     // sizes: build-unit observations, one per frozen artifact
@@ -1323,7 +1325,8 @@ async function runIos(ctx, { selected, builds, schedule, sid4, hostStart, progre
       family: c.family, architectureClass: c.architectureClass, buildId: builds[c.id].buildId,
       artifacts: builds[c.id].frozen.map(({ absFrozen, ...rest }) => rest), buildInputs: c.buildInputs,
       provenance: builds[c.id].prov, versions: c.versions, candidateJson: c.candidateJson, overridesApplied: c.overridesApplied,
-      streamSource: c.streamSource, streamSourceBasis: c.streamSourceBasis, verified: c.verified, installVerified: true,
+      streamSource: c.streamSource, streamSourceBasis: c.streamSourceBasis, instrumentationId: c.instrumentationId,
+      verified: c.verified, installVerified: true,
       limitations: c.limitations,
     });
     const sizeBase = journeyBase(ctx, env, c, build, { buildId: builds[c.id].buildId, scenarioId: 'early.size' });

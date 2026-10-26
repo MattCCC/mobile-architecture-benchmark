@@ -47,12 +47,12 @@ function fixtureKey(o) {
 // stream source and build class (plus candidate, platform and scenario).
 export function poolKey(o) {
   return [o.platform, o.build?.buildClass ?? 'unknown', o.scenarioId, o.methodId, o.candidateId, o.environmentRef,
-    o.build?.artifactSha256 ?? 'none', o.streamSource ?? 'unknown', fixtureKey(o)].join('|');
+    o.build?.artifactSha256 ?? 'none', o.streamSource ?? 'unknown', o.instrumentationId ?? 'unknown', fixtureKey(o)].join('|');
 }
 
 // Comparison group of the shared-session view: the pool key without candidate and artifact.
 function groupKey(r) {
-  return [r.platform, r.buildClass, r.scenarioId, r.methodId, r.environmentRef, r.streamSource, r.fixture].join('|');
+  return [r.platform, r.buildClass, r.scenarioId, r.methodId, r.environmentRef, r.streamSource, r.instrumentationId, r.fixture].join('|');
 }
 
 function statusKey(o) {
@@ -106,6 +106,7 @@ export function combine(sessions, { invalid = [] } = {}) {
           methodId: o.methodId, metricId: o.metricId, unit: o.unit, candidateId: o.candidateId,
           environmentRef: o.environmentRef, artifactSha256: o.build?.artifactSha256 ?? null,
           streamSource: o.streamSource ?? 'unknown', fixture: fixtureKey(o),
+          instrumentationId: o.instrumentationId ?? 'unknown',
           bySession: new Map(), statuses: new Map(), limitations: new Set(),
         });
       }
@@ -178,7 +179,8 @@ export function sharedGroups(rows) {
     const first = cellsOfGroup[0];
     return {
       key: k, platform: first.platform, buildClass: first.buildClass, scenarioId: first.scenarioId, methodId: first.methodId,
-      unit: first.unit, environmentRef: first.environmentRef, streamSource: first.streamSource, fixture: first.fixture,
+      unit: first.unit, environmentRef: first.environmentRef, streamSource: first.streamSource,
+      instrumentationId: first.instrumentationId, fixture: first.fixture,
       candidates, sharedSessions: shared,
       lines: cellsOfGroup.map((c) => {
         const used = c.sessions.filter((s) => shared.includes(s.sessionId));
@@ -238,6 +240,7 @@ function rowTable(rows) {
     short(r.artifactSha256),
     r.environmentRef,
     `${r.streamSource}, ${r.fixture}`,
+    r.instrumentationId,
     r.sessions.length === 0 ? '–' : r.sessions.map((s) => `${sessionShort(s.sessionId)}: ${fmt(s.median, r.unit)} (n=${s.n})`).join('<br>'),
     String(r.pooled.n),
     fmt(r.pooled.median, r.unit),
@@ -246,7 +249,7 @@ function rowTable(rows) {
     fmt(r.pooled.max, r.unit),
     r.statuses.map(([k, n]) => `${k}: ${n}`).join('<br>'),
   ]);
-  return table(['candidate', 'method id', 'unit', 'artifact sha256', 'environment', 'stream, fixture', 'per-session median (n)', 'pooled N',
+  return table(['candidate', 'method id', 'unit', 'artifact sha256', 'environment', 'stream, fixture', 'instrumentation', 'per-session median (n)', 'pooled N',
     'median', 'p95', 'min', 'max', 'observation status'], body);
 }
 
@@ -310,21 +313,23 @@ function sharedView(model) {
       continue;
     }
     out.push('One line per pool cell (candidate x artifact). Each comparison group has one method, environment, stream',
-      'source, fixture and build class; its shared sessions are those in which every candidate of the group has data.',
+      'source, fixture, instrumentation id and build class; its shared sessions are those in which every candidate of the group has data.',
       'Values are medians of per-session medians over those sessions (descriptive, no ranking).', '');
     const body = [];
     for (const g of multi) {
       if (g.sharedSessions.length === 0) {
-        body.push([g.scenarioId, `\`${g.methodId}\``, g.environmentRef, `${g.streamSource}, ${g.fixture}`, '–', '–', 'no shared session', '–', '–']);
+        body.push([g.scenarioId, `\`${g.methodId}\``, g.environmentRef, `${g.streamSource}, ${g.fixture}`, g.instrumentationId,
+          '–', '–', 'no shared session', '–', '–']);
         continue;
       }
       for (const l of g.lines) {
-        body.push([g.scenarioId, `\`${g.methodId}\``, g.environmentRef, `${g.streamSource}, ${g.fixture}`, l.candidateId, short(l.artifactSha256),
+        body.push([g.scenarioId, `\`${g.methodId}\``, g.environmentRef, `${g.streamSource}, ${g.fixture}`, g.instrumentationId,
+          l.candidateId, short(l.artifactSha256),
           l.sessions.length === 0 ? 'none (artifact not in the shared sessions)' : l.sessions.map(sessionShort).join(', '),
           String(l.journeys), `${fmt(l.medianOfSessionMedians, g.unit)} ${unitLabel(g.unit)}`]);
       }
     }
-    out.push(table(['scenario', 'method id', 'environment', 'stream, fixture', 'candidate', 'artifact sha256', 'shared sessions used',
+    out.push(table(['scenario', 'method id', 'environment', 'stream, fixture', 'instrumentation', 'candidate', 'artifact sha256', 'shared sessions used',
       'journeys', 'median of session medians'], body), '');
   }
   return out;

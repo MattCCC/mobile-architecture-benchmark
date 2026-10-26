@@ -29,6 +29,7 @@ function fakeRepo() {
     writeFileSync(join(d, 'candidates', id, 'candidate.json'), JSON.stringify({
       id, family: id, platforms: { android: { applicationId: pkg, launchActivity: `${pkg}/.MainActivity`,
         streamSource: 'replay', benchmarkBuild: { minSdk: 24, targetSdk: 36, abi: 'arm64-v8a', buildClass: 'release' },
+        instrumentationId: 'test-benchkit/1',
         artifacts: { apk: 'out/app.apk' } } },
     }));
     const receiptDir = join(d, 'receipts', id);
@@ -38,7 +39,7 @@ function fakeRepo() {
     writeFileSync(join(receiptDir, 'receipt.json'), JSON.stringify({
       schema: 'mobilebench.acceptance-receipt/1.0.0', suiteId: 'mobilebench.acceptance/1', status: 'passed',
       candidateId: id, platform: 'android', artifactSha256: sha256(`apk-${id}`), designSha256: sha256(design),
-      checks: ['initial-state', 'build-policy', 'list-geometry', 'selection-semantics', 'navigation', 'live-update',
+      checks: ['initial-state', 'build-policy', 'instrumentation-overhead', 'list-geometry', 'selection-semantics', 'navigation', 'live-update',
         'background-foreground', 'restore', 'insights', 'error-behavior'].map((check) => ({ id: check, status: 'passed' })),
       evidence: [{ path: 'evidence.txt', sha256: sha256(evidence) }],
     }));
@@ -99,7 +100,7 @@ test('CLI rejects bad input', () => {
     assert.equal(resolveCandidate({ repo, id: 'Bad_Id', platform: 'android' }).reason, 'invalid-candidate-id');
     assert.equal(resolveCandidate({ repo, id: 'native', platform: 'ios' }).reason, 'bundle-id-missing');
     const ov = resolveCandidate({ repo, id: 'nomanifest', platform: 'android', overrides: { nomanifest: { android: {
-      applicationId: 'org.example.x', streamSource: 'replay', artifacts: { apk: 'nope.apk' } } } } });
+      applicationId: 'org.example.x', streamSource: 'replay', instrumentationId: 'test-benchkit/1', artifacts: { apk: 'nope.apk' } } } } });
     assert.equal(ov.reason, 'artifact-missing');
   } finally {
     rmSync(repo, { recursive: true, force: true });
@@ -112,10 +113,11 @@ test('iOS: flutter release is unavailable on the simulator, flutter@debug is the
     mkdirSync(join(repo, 'candidates', 'flutter', 'build', 'Runner.app'), { recursive: true });
     writeFileSync(join(repo, 'candidates', 'flutter', 'build', 'Runner.app', 'Info.plist'), 'x');
     writeFileSync(join(repo, 'candidates', 'flutter', 'candidate.json'), JSON.stringify({ id: 'flutter', family: 'flutter', platforms: { ios: {
-      bundleId: 'org.example.mobilebench.flutter', streamSource: 'replay', buildClass: { simulator: 'debug' }, artifacts: { simulatorApp: 'build/Runner.app' } } } }));
+      bundleId: 'org.example.mobilebench.flutter', streamSource: 'replay', instrumentationId: 'test-benchkit/1',
+      buildClass: { simulator: 'debug' }, artifacts: { simulatorApp: 'build/Runner.app' } } } }));
     mkdirSync(join(repo, 'candidates', 'native'), { recursive: true });
     writeFileSync(join(repo, 'candidates', 'native', 'candidate.json'), JSON.stringify({ id: 'native', platforms: { ios: {
-      bundleId: 'org.example.mobilebench.nativeapp', streamSource: 'replay', artifacts: { app: 'x.app' } } } }));
+      bundleId: 'org.example.mobilebench.nativeapp', streamSource: 'replay', instrumentationId: 'test-benchkit/1', artifacts: { app: 'x.app' } } } }));
     const rel = resolveCandidate({ repo, id: 'flutter', platform: 'ios' });
     assert.deepEqual([rel.ok, rel.status, rel.reason], [false, 'unavailable', 'framework-no-release-on-simulator']);
     const dbg = resolveCandidate({ repo, id: 'flutter@debug', platform: 'ios' });
@@ -127,7 +129,8 @@ test('iOS: flutter release is unavailable on the simulator, flutter@debug is the
     // undeclared build class: taken from the Xcode products directory in the artifact path
     mkdirSync(join(repo, 'candidates', 'native', 'b', 'Release-iphonesimulator', 'N.app'), { recursive: true });
     writeFileSync(join(repo, 'candidates', 'native', 'candidate.json'), JSON.stringify({ id: 'native', platforms: { ios: {
-      bundleId: 'org.example.mobilebench.nativeapp', streamSource: 'replay', artifacts: { app: 'b/Release-iphonesimulator/N.app' } } } }));
+      bundleId: 'org.example.mobilebench.nativeapp', streamSource: 'replay', instrumentationId: 'test-benchkit/1',
+      artifacts: { app: 'b/Release-iphonesimulator/N.app' } } } }));
     const inferred = resolveCandidate({ repo, id: 'native', platform: 'ios' });
     assert.deepEqual([inferred.ok, inferred.declaredBuildClass], [true, 'release']);
     assert.match(inferred.buildClassSource, /artifact path/);

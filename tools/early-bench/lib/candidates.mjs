@@ -98,6 +98,7 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
     benchmarkBuild: p.benchmarkBuild ?? null,
     sizeClassification: Array.isArray(p.sizeClassification) ? p.sizeClassification : [],
     benchmarkPayloadAccounting: p.benchmarkPayloadAccounting ?? { status: 'extractable' },
+    instrumentationId: typeof p.instrumentationId === 'string' ? p.instrumentationId : null,
     buildInputs: inputs.dirs,
     sharedBuildInputs: inputs.shared,
     sharedBuildInputsBasis: inputs.basis,
@@ -116,6 +117,9 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
     }
     if (!['replay', 'server'].includes(streamSource)) {
       return { ...base, ok: false, status: 'not-measured', reason: 'stream-source-undeclared-or-invalid' };
+    }
+    if (!base.instrumentationId) {
+      return { ...base, ok: false, status: 'not-measured', reason: 'instrumentation-id-undeclared' };
     }
     if (!apk || !existsSync(join(repo, dir, apk))) {
       return { ...base, ok: false, status: 'not-measured', reason: 'artifact-missing', packageName: pkg };
@@ -159,6 +163,9 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
   }
   if (!['replay', 'server'].includes(streamSource)) {
     return { ...base, ok: false, status: 'not-measured', reason: 'stream-source-undeclared-or-invalid', bundleId };
+  }
+  if (!base.instrumentationId) {
+    return { ...base, ok: false, status: 'not-measured', reason: 'instrumentation-id-undeclared', bundleId };
   }
   if (!app || !existsSync(join(repo, dir, app))) {
     return { ...base, ok: false, status: 'not-measured', reason: 'artifact-missing', bundleId };

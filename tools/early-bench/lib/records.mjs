@@ -107,6 +107,7 @@ export function makeObservation(base, fields) {
     deviceKey: base.deviceKey ?? null,
     build: base.build ?? null,
     streamSource: base.streamSource ?? 'unknown',
+    instrumentationId: base.instrumentationId ?? 'unknown',
     fixture: base.fixture ?? null,
     rawRefs: fields.rawRefs ?? [],
   };

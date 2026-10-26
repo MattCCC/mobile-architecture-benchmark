@@ -4,6 +4,7 @@
   "requiredChecks": [
     "initial-state",
     "build-policy",
+    "instrumentation-overhead",
     "list-geometry",
     "selection-semantics",
     "navigation",
