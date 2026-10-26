@@ -144,7 +144,7 @@ export function resolveCandidate({ repo, id, platform, overrides = {} }) {
   }
   // iOS simulator build class: declared per candidate, else the Xcode products directory of the artifact path
   // (`Build/Products/<Configuration>-iphonesimulator/`); the bundle itself carries no reliable marker.
-  const explicit = typeof p.buildClass === 'string' ? p.buildClass : (p.buildClass?.simulator ?? null);
+  const explicit = typeof p.buildClass === 'string' ? p.buildClass : (p.buildClass?.simulator ?? p.benchmarkBuild?.buildClass ?? null);
   const fromPath = /(?:^|\/)Release-iphonesimulator\//.test(String(app ?? '')) ? 'release' : (/(?:^|\/)Debug-iphonesimulator\//.test(String(app ?? '')) ? 'debug' : null);
   const declared = explicit ?? fromPath;
   const buildClassSource = explicit ? 'candidate.json buildClass' : (fromPath ? 'artifact path (Xcode <Configuration>-iphonesimulator products directory)' : null);
