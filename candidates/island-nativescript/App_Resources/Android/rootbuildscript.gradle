@@ -1,0 +1,5 @@
+// Root buildscript additions: the Compose compiler plugin of the shared Jetpack Compose host, at the Kotlin
+// version of the NativeScript Android runtime (ns_default_kotlin_version of @nativescript/android 9.1.1).
+dependencies {
+  classpath 'org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.4.10'
+}

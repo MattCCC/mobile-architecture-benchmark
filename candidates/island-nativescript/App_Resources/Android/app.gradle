@@ -1,0 +1,74 @@
+// App-level Gradle settings, applied by the NativeScript Android runtime after its own defaults.
+// The NativeScript CLI builds the APK, but the application is the shared native island host
+// (candidates/_island-host, Jetpack Compose shell): its manifest, sources and resources replace the template's
+// NativeScriptApplication / NativeScriptActivity. NativeScript only renders the Detail and Insights islands.
+// Release signing comes from the CLI's --key-store-* arguments (the shared island-host key, see candidate.mk).
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+def repoRoot = new File(rootDir, '../../../..').canonicalFile
+def sharedHost = new File(repoRoot, 'candidates/_island-host')
+
+dependencies {
+  implementation platform('androidx.compose:compose-bom:2026.09.00')
+  implementation 'androidx.compose.ui:ui'
+  implementation 'androidx.compose.foundation:foundation'
+  implementation 'androidx.activity:activity-compose:1.13.0'
+  implementation 'androidx.navigation:navigation-compose:2.10.2'
+  implementation 'androidx.profileinstaller:profileinstaller:1.4.1'
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.json:json:20260814'
+}
+
+android {
+  // The shared host's manifest names its classes relative to this namespace.
+  namespace 'org.example.mobilebench.islandhost'
+  compileSdkVersion 37
+  defaultConfig {
+    applicationId 'org.example.mobilebench.islandnativescript'
+    minSdkVersion 24
+    targetSdkVersion 36
+    versionCode 1
+    versionName '0.1.0'
+    generatedDensities = []
+    ndk {
+      abiFilters.clear()
+      abiFilters((project.findProperty('mbAbis') ?: 'arm64-v8a').toString().split(',')*.trim() as String[])
+    }
+  }
+  buildTypes {
+    release {
+      // Resource shrinking stays off: NativeScript resolves resources by name from JavaScript.
+      minifyEnabled true
+      shrinkResources false
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'src/main/proguard-rules.pro',
+        new File(sharedHost, 'android/proguard-rules.pro')
+    }
+  }
+  buildFeatures { compose true }
+  sourceSets {
+    main {
+      manifest.srcFile new File(sharedHost, 'android/src/main/AndroidManifest.xml')
+      java.srcDirs += new File(sharedHost, 'android/src/main/java')
+      res.srcDirs += new File(sharedHost, 'android/src/main/res')
+      assets.srcDirs += new File(sharedHost, 'generated/assets')
+    }
+    test.java.srcDirs += new File(sharedHost, 'android/src/test/java')
+  }
+  testOptions {
+    unitTests.all {
+      systemProperty 'mb.assetsDir', new File(sharedHost, 'generated/assets/fixtures').path
+      systemProperty 'mb.goldenFile', new File(repoRoot, 'fixtures/v1/golden.json').path
+    }
+  }
+  aaptOptions {
+    additionalParameters "--no-version-vectors"
+  }
+}
+
+// Gradle 9 rejects undeclared task dependencies: the runtime's cleanupAllJars reads every compile-classpath jar,
+// including AGP's generated R.jar.
+afterEvaluate {
+  tasks.named('cleanupAllJars') {
+    dependsOn tasks.matching { it.name ==~ /generate\w+RFile/ }
+  }
+}

@@ -1,0 +1,16 @@
+# Dependencies and NativeScript CLI output
+node_modules/
+platforms/
+hooks/
+# Verified copies of the shared fixtures and the generated stream files (scripts/prepare-assets.mjs)
+app/generated/
+App_Resources/Android/src/main/assets/mobilebench/
+# Unit-test build output, release artifacts, logs
+build/
+dist/
+*.log
+.DS_Store
+# Local signing material is never committed
+*.jks
+*.keystore
+keystore.properties

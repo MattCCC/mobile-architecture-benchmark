@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Read by the NativeScript CLI only. The build uses the shared island host's manifest instead
+     (candidates/_island-host/android/src/main/AndroidManifest.xml, see app.gradle sourceSets). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+	package="__PACKAGE__">
+	<application android:name="org.example.mobilebench.islandhost.MobileBenchApp" />
+</manifest>

@@ -1,0 +1,95 @@
+{
+  "schema": "mobilebench.candidate/1.0.0",
+  "id": "island-nativescript",
+  "displayName": "Native shell with NativeScript UI islands",
+  "role": "candidate",
+  "variantOf": null,
+  "family": "island",
+  "architectureClass": "native-shell-cross-platform-ui-islands",
+  "owner": "island-nativescript",
+  "status": { "android": "implemented", "ios": "not-implemented" },
+  "statusNote": "The native shell owns List, Selection, navigation, state, persistence and stream processing. One NativeScript V8 runtime renders Detail and Insights with @nativescript/core views and calls the host's Kotlin directly. iOS embedding (NativeScriptEmbedder in the UIKit host) is not implemented yet.",
+  "host": {
+    "path": "candidates/_island-host",
+    "sha256": "48200e07f554937285d80eaa2670952bdb42dc14973132f3fdab7a2b57e7272d"
+  },
+  "sharedBuildInputs": [
+    "candidates/_island-host",
+    "candidates/_island-rn-ui/src/model.ts",
+    "candidates/_island-rn-ui/src/protocol.ts",
+    "candidates/_rn-shared/ui/src/domain"
+  ],
+  "platforms": {
+    "android": {
+      "applicationId": "org.example.mobilebench.islandnativescript",
+      "launchActivity": "org.example.mobilebench.islandnativescript/org.example.mobilebench.islandhost.MainActivity",
+      "contentSurface": "native-activity-with-nativescript-islands",
+      "uiToolkit": "Jetpack Compose shell; NativeScript core Detail and Insights islands",
+      "runtime": "ART native shell plus one lazy or prewarmed NativeScript V8 runtime",
+      "listPrimitive": "native LazyColumn",
+      "navigation": "native Navigation Compose NavHost",
+      "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
+      "streamSource": "replay",
+      "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
+      "instrumentationId": "island-host-nativescript-direct-interim/1",
+      "buildClass": "release",
+      "artifacts": { "apk": "build/android/app-arm64-release.apk" },
+      "sizeClassification": [
+        { "glob": "lib/*/libNativeScript.so", "category": "framework" },
+        { "glob": "assets/app/**", "category": "app-code" },
+        { "glob": "assets/metadata/**", "category": "framework" },
+        { "glob": "assets/fixtures/*", "category": "benchmark-payload" },
+        { "glob": "**", "category": "other" }
+      ]
+    }
+  },
+  "versions": {
+    "nativescriptCore": "9.1.3",
+    "nativescriptAndroid": "9.1.1",
+    "nativescriptCli": "9.1.2",
+    "typescript": "6.0.3",
+    "gradle": "9.3.1",
+    "androidGradlePlugin": "9.1.0",
+    "kotlin": "2.4.10"
+  },
+  "toolchains": ["node", "jdk17", "android-sdk"],
+  "remoteLoading": {
+    "R1": { "status": "applicable", "note": "The Insights island is embedded in the installed artifact." },
+    "R2": { "status": "not-applicable", "reason": "Independently delivered island JavaScript is not implemented." },
+    "R3": { "status": "not-applicable", "reason": "as R2" },
+    "R4": { "status": "not-applicable", "reason": "as R2" },
+    "R5": { "status": "not-applicable", "reason": "as R2" },
+    "R6": { "status": "not-applicable", "reason": "as R2" },
+    "R9": { "status": "not-applicable", "reason": "as R2" }
+  },
+  "bridge": {
+    "sync": { "status": "applicable", "note": "Host-to-island messages go through a JavaScript-implemented Handler.Callback and markers / draw probes call IslandBenchApi, all synchronously on the main thread; the bridge micro-benchmark is not implemented." },
+    "async": { "status": "not-applicable", "reason": "Only the island's ready message is deferred by one main-loop turn." }
+  },
+  "crossRuntime": {
+    "applicable": true,
+    "boundary": "native host owns data and navigation; NativeScript renders Detail and Insights from versioned JSON messages"
+  },
+  "deviations": [
+    {
+      "id": "benchkit-candidate-local",
+      "description": "The native host marker core is candidate-local interim instrumentation; island markers call it directly.",
+      "impact": "Results remain descriptive until the shared calibrated BenchKit and overhead experiment exist."
+    },
+    {
+      "id": "stream-source-replay",
+      "description": "The native host replays the same golden-verified bundled stream on the absolute monotonic schedule.",
+      "impact": "It compares only inside replay transport cells and is never pooled with server transport."
+    },
+    {
+      "id": "nativescript-template-gradle9",
+      "description": "The NativeScript CLI generates the Android project, which is built on Gradle 9.3.1 / AGP 9.1.0 like the other island hosts instead of the runtime template's Gradle 8.14.3 / AGP 8.12.1, with two compatibility edits (scripts/build-android.sh).",
+      "impact": "The shared host compiles against the same AndroidX and Compose versions as the other island candidates."
+    },
+    {
+      "id": "nativescript-runtime-permissions",
+      "description": "The NativeScript runtime library manifest merges storage and phone-state permissions into the APK.",
+      "impact": "Declared only; the app never requests them."
+    }
+  ]
+}

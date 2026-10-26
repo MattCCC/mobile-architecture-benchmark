@@ -1,0 +1,28 @@
+{
+  "name": "mobilebench-island-nativescript",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NativeScript islands inside the shared native island host of the mobile architecture benchmark",
+  "license": "Apache-2.0",
+  "main": "app/app.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "node --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@nativescript/core": "9.1.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@nativescript/android": "9.1.1",
+    "@nativescript/ios": "9.1.0",
+    "@nativescript/types": "9.1.4",
+    "@nativescript/webpack": "5.0.39",
+    "@types/node": "24.19.2",
+    "eslint": "10.13.0",
+    "nativescript": "9.1.2",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0"
+  }
+}
