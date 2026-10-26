@@ -1,1 +1,5 @@
 #include "Generated.xcconfig"
+
+// Benchmark build policy: arm64 only. The simulator build (debug: Flutter has no release simulator mode) would
+// otherwise be universal (x86_64 + arm64).
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
