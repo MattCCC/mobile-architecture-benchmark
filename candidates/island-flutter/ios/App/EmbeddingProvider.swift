@@ -16,7 +16,6 @@ private final class FlutterIslandEmbedding: IslandEmbedding {
     private weak var host: IslandHost?
     private var engine: FlutterEngine?
     private var channel: FlutterMethodChannel?
-    private var controllers: [Int: FlutterViewController] = [:]
     private var runtimeReady = false
     private var activeSid = -1
     private var pendingInit: String?
@@ -53,18 +52,24 @@ private final class FlutterIslandEmbedding: IslandEmbedding {
 
     func insightsSource() -> IslandSource { IslandSource(src: "embedded", version: "1") }
 
+    /// One engine, one view controller: the app shows one island at a time (Insights opens from the List only), so
+    /// every island reuses the controller and its view. A second controller on the same engine does not get the
+    /// accessibility tree back after the first one is released.
+    private var controller: FlutterViewController?
+
     func makeView(sid: Int, kind: IslandKind, initJSON: String) -> UIView {
         start()
         guard let engine else { return UIView() }
         activeSid = sid
         pendingInit = initJSON
-        let controller = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
-        controllers[sid] = controller
-        controller.view.backgroundColor = .white
-        controller.beginAppearanceTransition(true, animated: false)
-        controller.endAppearanceTransition()
+        let shared = controller ?? FlutterViewController(engine: engine, nibName: nil, bundle: nil)
+        controller = shared
+        shared.view.removeFromSuperview()
+        shared.view.backgroundColor = .white
+        shared.beginAppearanceTransition(true, animated: false)
+        shared.endAppearanceTransition()
         if runtimeReady { channel?.invokeMethod("message", arguments: initJSON) }
-        return controller.view
+        return shared.view
     }
 
     func send(view: UIView, sid: Int, message: String) {
@@ -72,10 +77,9 @@ private final class FlutterIslandEmbedding: IslandEmbedding {
     }
 
     func release(view: UIView, sid: Int) {
-        if let controller = controllers.removeValue(forKey: sid) {
-            controller.beginAppearanceTransition(false, animated: false)
-            controller.endAppearanceTransition()
-        }
+        guard activeSid == sid else { return }
+        controller?.beginAppearanceTransition(false, animated: false)
+        controller?.endAppearanceTransition()
         if activeSid == sid {
             activeSid = -1
             pendingInit = nil

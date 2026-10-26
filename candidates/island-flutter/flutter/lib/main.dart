@@ -181,11 +181,15 @@ class IslandAppState extends State<IslandApp> {
         colorSchemeSeed: Colors.blue,
         scaffoldBackgroundColor: Colors.white,
       ),
-      home: model == null
-          ? const ColoredBox(color: Colors.white)
-          : model.kind == 'detail'
-          ? DetailIsland(model: model)
-          : InsightsIsland(model: model),
+      // Material supplies the text theme; without it Text falls back to the debug "missing Material" style.
+      home: Material(
+        color: Colors.white,
+        child: model == null
+            ? const SizedBox.expand()
+            : model.kind == 'detail'
+            ? DetailIsland(model: model)
+            : InsightsIsland(model: model),
+      ),
     );
   }
 }
