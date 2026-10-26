@@ -196,10 +196,10 @@ export function estimate(platform, { journeys, memoryJourneys, idleS, scrollJour
       + (blocks + energyJourneys) * 1.5;
     return { overheadS: 150 + 60 + 20, perCandidateS: perCandidate };
   }
-  const groups = 1 + (memoryJourneys > 0 ? 1 : 0) + (scrollJourneys > 0 ? 1 : 0);
-  const blocks = journeys + memoryJourneys + scrollJourneys;
-  const perCandidate = 25 + 15 + groups * 20 + journeys * 16 + memoryJourneys * (idleS + 18)
-    + scrollJourneys * (20 + scrollS(scrollSwipes)) + blocks * 1;
+  // iOS: early.scroll is unavailable on the simulator (no group is scheduled)
+  const groups = 1 + (memoryJourneys > 0 ? 1 : 0);
+  const blocks = journeys + memoryJourneys;
+  const perCandidate = 25 + 15 + groups * 20 + journeys * 16 + memoryJourneys * (idleS + 18) + blocks * 1;
   return { overheadS: 90 + 40, perCandidateS: perCandidate };
 }
 
