@@ -1,0 +1,30 @@
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve("react-native/scripts/react_native_pods.rb", {paths: [process.argv[1]]})',
+  File.expand_path('../rn', __dir__)]).strip
+
+platform :ios, '16.4'
+prepare_react_native_project!
+rn_dir = File.expand_path('../rn', __dir__)
+
+target 'MBIslandRn' do
+  pod 'ReactBrownfield', :path => '../rn/node_modules/@callstack/react-native-brownfield'
+  pod 'MobileBenchIslandBench', :path => '../../_island-rn-ui/benchkit'
+
+  use_react_native!(
+    :path => File.join(rn_dir, 'node_modules/react-native'),
+    :app_path => rn_dir
+  )
+
+  post_install do |installer|
+    react_native_post_install(installer, File.join(rn_dir, 'node_modules/react-native'), :mac_catalyst_enabled => false)
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.4'
+        if target.name == 'ReactBrownfield'
+          # Brownfield 6 predates Swift 6's strict global-state checks.
+          config.build_settings['SWIFT_VERSION'] = '5.0'
+        end
+      end
+    end
+  end
+end

@@ -4,10 +4,10 @@ import android.app.Application
 import android.graphics.Color
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.fragment.app.FragmentActivity
 import org.example.mobilebench.islandhost.bench.BenchKit
 import org.example.mobilebench.islandhost.ui.AppRoot
 import org.example.mobilebench.islandhost.ui.ErrorScreen
@@ -19,7 +19,7 @@ class MobileBenchApp : Application() {
     }
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // super.onCreate dispatches onActivityCreated to BenchKit, which parses the launch configuration and
         // lets AppRuntime create (or reset) the session before the UI is composed.

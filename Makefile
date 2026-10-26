@@ -16,6 +16,7 @@ help:
 	@echo "  test-eligibility   unit tests of fail-closed eligibility rules"
 	@echo "  test-early-bench   unit tests of tools/early-bench"
 	@echo "  check-<id>, build-<id>-android, build-<id>-ios   per candidate, see candidates/<id>/README.md"
+	@echo "Candidates: $(sort $(MB_CANDIDATES))"
 
 check: check-fixtures test-acceptance test-eligibility test-early-bench
 

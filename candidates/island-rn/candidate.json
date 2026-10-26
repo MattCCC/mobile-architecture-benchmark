@@ -1,0 +1,111 @@
+{
+  "schema": "mobilebench.candidate/1.0.0",
+  "id": "island-rn",
+  "displayName": "Native shell with React Native UI islands",
+  "role": "candidate",
+  "variantOf": null,
+  "family": "island",
+  "architectureClass": "native-shell-cross-platform-ui-islands",
+  "owner": "island-rn",
+  "status": { "android": "implemented", "ios": "implemented" },
+  "statusNote": "The native shell owns List, Selection, navigation, state, persistence and stream processing. One shared React Native/Hermes runtime renders Detail and Insights. The default transport is the same bundled replay comparison cell as the other current candidates.",
+  "host": {
+    "path": "candidates/_island-host",
+    "sha256": "48200e07f554937285d80eaa2670952bdb42dc14973132f3fdab7a2b57e7272d"
+  },
+  "sharedBuildInputs": [
+    "candidates/_island-host",
+    "candidates/_island-rn-ui",
+    "candidates/_rn-shared"
+  ],
+  "platforms": {
+    "android": {
+      "applicationId": "org.example.mobilebench.islandrn",
+      "launchActivity": "org.example.mobilebench.islandrn/org.example.mobilebench.islandhost.MainActivity",
+      "contentSurface": "native-activity-with-react-native-islands",
+      "uiToolkit": "Jetpack Compose shell; React Native Fabric Detail and Insights islands",
+      "runtime": "ART native shell plus one lazy or prewarmed Hermes runtime",
+      "listPrimitive": "native LazyColumn",
+      "navigation": "native Navigation Compose NavHost",
+      "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
+      "streamSource": "replay",
+      "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
+      "instrumentationId": "island-host-rn-forwarder-interim/1",
+      "buildClass": "release",
+      "artifacts": { "apk": "android/app/build/outputs/apk/release/app-release.apk" },
+      "sizeClassification": [
+        { "glob": "lib/*/libhermes*.so", "category": "framework" },
+        { "glob": "lib/*/libreactnative.so", "category": "framework" },
+        { "glob": "assets/index.android.bundle", "category": "app-code" },
+        { "glob": "assets/fixtures/*", "category": "benchmark-payload" },
+        { "glob": "**", "category": "other" }
+      ]
+    },
+    "ios": {
+      "bundleId": "org.example.mobilebench.islandrn",
+      "contentSurface": "native-uikit-shell-with-react-native-islands",
+      "uiToolkit": "UIKit shell; React Native Fabric Detail and Insights islands",
+      "runtime": "Swift native shell plus one lazy or prewarmed Hermes runtime",
+      "listPrimitive": "native UITableView",
+      "navigation": "native UINavigationController",
+      "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
+      "streamSource": "replay",
+      "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "release" },
+      "instrumentationId": "island-host-rn-forwarder-interim/1",
+      "buildClass": { "simulator": "release", "device": "release" },
+      "artifacts": { "simulatorApp": "build/ios/Build/Products/Release-iphonesimulator/MBIslandRn.app" },
+      "sizeClassification": [
+        { "glob": "main.jsbundle", "category": "app-code" },
+        { "glob": "fixtures/*", "category": "benchmark-payload" },
+        { "glob": "Frameworks/**", "category": "framework" },
+        { "glob": "**", "category": "other" }
+      ]
+    }
+  },
+  "versions": {
+    "reactNative": "0.88.0",
+    "react": "19.3.0",
+    "brownfield": "6.0.1",
+    "hermes": "260318099.0.4",
+    "gradle": "9.8.2",
+    "androidGradlePlugin": "9.4.1",
+    "kotlin": "2.2.0",
+    "xcode": "27.1 (27A9275)",
+    "swiftLanguageMode": "6 (host/core); 5 (ReactBrownfield compatibility)"
+  },
+  "toolchains": ["node", "npm", "jdk17", "android-sdk", "xcode", "cocoapods", "ios-sim-runtime"],
+  "remoteLoading": {
+    "R1": { "status": "applicable", "note": "The Insights island is embedded in the installed artifact." },
+    "R2": { "status": "not-applicable", "reason": "This candidate packages an embedded React Native island bundle; independently delivered island code is not implemented." },
+    "R3": { "status": "not-applicable", "reason": "as R2" },
+    "R4": { "status": "not-applicable", "reason": "as R2" },
+    "R5": { "status": "not-applicable", "reason": "as R2" },
+    "R6": { "status": "not-applicable", "reason": "as R2" },
+    "R9": { "status": "not-applicable", "reason": "as R2" }
+  },
+  "bridge": {
+    "sync": { "status": "applicable", "note": "Island markers and draw probes use a synchronous native forwarder; the bridge micro-benchmark is not implemented." },
+    "async": { "status": "applicable", "note": "Host state snapshots and updates cross the Brownfield message channel; the bridge micro-benchmark is not implemented." }
+  },
+  "crossRuntime": {
+    "applicable": true,
+    "boundary": "native host owns data and navigation; React Native renders Detail and Insights from versioned JSON messages"
+  },
+  "deviations": [
+    {
+      "id": "benchkit-candidate-local",
+      "description": "The native host marker core and React Native forwarder are candidate-local interim instrumentation.",
+      "impact": "Results remain descriptive until the shared calibrated BenchKit and overhead experiment exist."
+    },
+    {
+      "id": "stream-source-replay",
+      "description": "The native host replays the same golden-verified bundled stream on the absolute monotonic schedule.",
+      "impact": "It compares only inside replay transport cells and is never pooled with server transport."
+    },
+    {
+      "id": "ios-source-linked-runtime",
+      "description": "Android consumes the packaged Brownfield AAR; the iOS simulator app links the same RN/Brownfield sources through CocoaPods while packaging support matures.",
+      "impact": "Packaging strategy is platform-specific and recorded in build provenance."
+    }
+  ]
+}

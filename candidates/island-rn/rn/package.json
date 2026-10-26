@@ -4,6 +4,13 @@
   "private": true,
   "license": "Apache-2.0",
   "description": "React Native islands (Detail, Insights) packaged with React Native Brownfield as an Android AAR and an iOS XCFramework for the shared island host",
+  "scripts": {
+    "test": "node --test ../../_island-rn-ui/test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint --config .eslintrc.js index.js BuildProbe.ts '../../_island-rn-ui/src/**/*.{ts,tsx}' '../../_island-rn-ui/benchkit/src/**/*.ts'",
+    "package:android": "brownfield package:android",
+    "package:ios": "brownfield package:ios --add-spm-package"
+  },
   "dependencies": {
     "@callstack/brownfield-cli": "6.0.1",
     "@callstack/react-native-brownfield": "6.0.1",

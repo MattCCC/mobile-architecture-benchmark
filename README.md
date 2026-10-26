@@ -23,13 +23,14 @@ architecture, not from the app doing different work.
 | `expo` | React Native with Expo | runnable |
 | `repack` | React Native with Re.Pack and remote modules | runnable |
 | `nativescript` | NativeScript | runnable |
-| `island-rn` | Native shell with React Native Detail and Insights islands | planned |
+| `island-rn` | Native shell with React Native Detail and Insights islands | runnable |
 
 `island-rn` is a brownfield setup: native List and Selection screens, with Detail and Insights as React Native
 islands sharing one runtime. The native host owns data, streaming, navigation, restoration and state; the RN code
-ships as an Android AAR and an iOS XCFramework via React Native Brownfield. Work lives in
-`candidates/_island-host`, `candidates/_island-rn-ui` and `candidates/island-rn`; it is not yet registered in the
-Makefile and cannot be built or measured through the standard interface.
+ships as an Android AAR and is linked into the iOS app through CocoaPods via React Native Brownfield. Work lives in
+`candidates/_island-host`, `candidates/_island-rn-ui` and `candidates/island-rn`. It is registered in the Makefile
+and benchmark runner; like every candidate, an exact artifact still needs a passing acceptance receipt before a
+session will measure it.
 
 Shared React Native code lives in `candidates/_rn-shared`. Each candidate's README lists its versions, its build
 configuration and what has been verified on each platform.

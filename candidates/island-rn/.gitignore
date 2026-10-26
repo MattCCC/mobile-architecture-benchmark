@@ -1,0 +1,6 @@
+/build/
+/android/.gradle/
+/android/app/build/
+/ios/MBIslandRn.xcodeproj/
+/ios/MBIslandRn.xcworkspace/
+/ios/Pods/
