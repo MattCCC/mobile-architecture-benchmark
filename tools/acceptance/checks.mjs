@@ -17,6 +17,7 @@
 import { appendFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { sleep } from '../early-bench/lib/exec.mjs';
+import { hashArtifact } from '../early-bench/lib/candidates.mjs';
 import { sha256, sha256File } from '../early-bench/lib/hash.mjs';
 import { CONTRACT } from './lib.mjs';
 import { ReferenceModel, itemLabel, OPTION_KEYS } from './model.mjs';
@@ -146,7 +147,8 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
 
   // ---------------------------------------------------------------------------------------------- checks
   const designSha256 = sha256File(join(repo, 'design.md'));
-  const artifactSha256 = sha256File(artifactPath);
+  // The runner's artifact identity: file bytes for an APK, the tree hash for an .app directory.
+  const artifactSha256 = hashArtifact(artifactPath).sha256;
   log('setup', 'artifact', { candidate: candidateId, platform: device.platform, artifact: relative(repo, artifactPath),
     artifactSha256, designSha256, rowExtent: device.rowExtent });
 
