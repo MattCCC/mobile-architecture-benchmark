@@ -1,0 +1,4 @@
+module MBLog {
+    header "MBLog.h"
+    export *
+}

@@ -28,10 +28,12 @@ export function markerFields(payload) {
   return Object.fromEntries(payload.split(';').filter((kv) => kv.includes('=')).map((kv) => kv.split('=')));
 }
 
-/** Text of a node and its descendants (toolkits put button and cell text in child views). */
+/** Text of a node: its descendants' text when they carry any (toolkits put button and cell text in child views, and
+ * iOS containers repeat their children's labels as an aggregate label), else its own. */
 export function textOf(node) {
   if (!node) return '';
-  return [node.text, node.desc, ...node.all.map((n) => n.text || n.desc)].filter(Boolean).join('\n');
+  const inner = node.all.map((n) => n.text || n.desc).filter(Boolean);
+  return inner.length > 0 ? inner.join('\n') : [node.text, node.desc].filter(Boolean).join('\n');
 }
 
 const fmtValue = (v) => `${Math.floor(v / 100)}.${String(v % 100).padStart(2, '0')}`;
@@ -108,7 +110,12 @@ export async function runAcceptance({ repo, candidateId, profile, out, artifactP
     return device.secondsSince(open).then((s) => from - 1 + Math.ceil(s * model.rate) + 3);
   }
 
-  const rowIndices = (ui) => ui.nodes.filter((n) => /^mb\.row\.\d+$/.test(n.id)).map((n) => Number(n.id.split('.')[2]));
+  /** Rows on screen: inside the list's bounds (iOS snapshots also contain off-screen cells). */
+  const rowIndices = (ui) => {
+    const list = ui.find('mb.list');
+    const visible = (n) => !list || (n.bounds.b > list.bounds.t + 1 && n.bounds.t < list.bounds.b - 1);
+    return ui.nodes.filter((n) => /^mb\.row\.\d+$/.test(n.id) && visible(n)).map((n) => Number(n.id.split('.')[2]));
+  };
 
   /** Visible rows: labels exact; option state exact; values and total consistent with the stream window. */
   function checkList(id, ui, lo, hi) {

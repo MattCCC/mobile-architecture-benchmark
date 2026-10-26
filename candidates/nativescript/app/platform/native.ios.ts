@@ -22,7 +22,11 @@ export function traceMarker(_sectionName: string): void {
 
 const stderrHandle = NSFileHandle.fileHandleWithStandardError;
 
+/** App_Resources/iOS/src/MBLog.m: os_log into the unified log, where the runner reads the control lines. */
+declare const MBLog: { line(line: string): void };
+
 export function logLine(line: string): void {
+  MBLog.line(line);
   const data = NSString.stringWithString(`${line}\n`).dataUsingEncoding(NS_UTF8_STRING_ENCODING);
   if (data) {
     stderrHandle.writeData(data);
