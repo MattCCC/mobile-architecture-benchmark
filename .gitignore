@@ -36,3 +36,4 @@ local.properties
 # Local benchmark run output
 results/local/
 *.log
+.git
