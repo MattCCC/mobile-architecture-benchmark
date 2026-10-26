@@ -25,7 +25,7 @@ architecture, not from the app doing different work.
 | `nativescript` | NativeScript | runnable |
 | `island-rn` | Native shell with React Native Detail and Insights islands | runnable |
 | `island-flutter` | Native shell with Flutter Detail and Insights islands | runnable (iOS simulator: debug) |
-| `island-nativescript` | Native shell with NativeScript Detail and Insights islands | runnable on Android; iOS planned |
+| `island-nativescript` | Native shell with NativeScript Detail and Insights islands | runnable |
 
 `island-rn` is a brownfield setup: native List and Selection screens, with Detail and Insights as React Native
 islands sharing one runtime. The native host owns data, streaming, navigation, restoration and state; the RN code

@@ -7,8 +7,8 @@
   "family": "island",
   "architectureClass": "native-shell-cross-platform-ui-islands",
   "owner": "island-nativescript",
-  "status": { "android": "implemented", "ios": "not-implemented" },
-  "statusNote": "The native shell owns List, Selection, navigation, state, persistence and stream processing. One NativeScript V8 runtime renders Detail and Insights with @nativescript/core views and calls the host's Kotlin directly. iOS embedding (NativeScriptEmbedder in the UIKit host) is not implemented yet.",
+  "status": { "android": "implemented", "ios": "implemented" },
+  "statusNote": "The native shell owns List, Selection, navigation, state, persistence and stream processing. One NativeScript V8 runtime renders Detail and Insights with @nativescript/core views and talks to the host synchronously (Kotlin calls on Android, NSNotificationCenter posts on iOS).",
   "host": {
     "path": "candidates/_island-host",
     "sha256": "48200e07f554937285d80eaa2670952bdb42dc14973132f3fdab7a2b57e7272d"
@@ -41,18 +41,41 @@
         { "glob": "assets/fixtures/*", "category": "benchmark-payload" },
         { "glob": "**", "category": "other" }
       ]
+    },
+    "ios": {
+      "bundleId": "org.example.mobilebench.islandnativescript",
+      "contentSurface": "native-uikit-shell-with-nativescript-islands",
+      "uiToolkit": "UIKit shell; NativeScript core Detail and Insights islands",
+      "runtime": "Swift native shell plus one lazy or prewarmed NativeScript V8 runtime",
+      "listPrimitive": "native UITableView",
+      "navigation": "native UINavigationController",
+      "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
+      "streamSource": "replay",
+      "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "release" },
+      "instrumentationId": "island-host-nativescript-direct-interim/1",
+      "buildClass": "release",
+      "artifacts": { "simulatorApp": "build/ios/MBIslandNativeScript.app" },
+      "sizeClassification": [
+        { "glob": "Frameworks/NativeScript.framework/**", "category": "framework" },
+        { "glob": "Frameworks/**", "category": "framework" },
+        { "glob": "app/**", "category": "app-code" },
+        { "glob": "fixtures/*", "category": "benchmark-payload" },
+        { "glob": "**", "category": "other" }
+      ]
     }
   },
   "versions": {
     "nativescriptCore": "9.1.3",
     "nativescriptAndroid": "9.1.1",
+    "nativescriptIos": "9.1.0",
+    "swiftLanguageMode": "6",
     "nativescriptCli": "9.1.2",
     "typescript": "6.0.3",
     "gradle": "9.3.1",
     "androidGradlePlugin": "9.1.0",
     "kotlin": "2.4.10"
   },
-  "toolchains": ["node", "jdk17", "android-sdk"],
+  "toolchains": ["node", "jdk17", "android-sdk", "xcode", "cocoapods", "ios-sim-runtime"],
   "remoteLoading": {
     "R1": { "status": "applicable", "note": "The Insights island is embedded in the installed artifact." },
     "R2": { "status": "not-applicable", "reason": "Independently delivered island JavaScript is not implemented." },
@@ -63,7 +86,7 @@
     "R9": { "status": "not-applicable", "reason": "as R2" }
   },
   "bridge": {
-    "sync": { "status": "applicable", "note": "Host-to-island messages go through a JavaScript-implemented Handler.Callback and markers / draw probes call IslandBenchApi, all synchronously on the main thread; the bridge micro-benchmark is not implemented." },
+    "sync": { "status": "applicable", "note": "Android: a JavaScript-implemented Handler.Callback plus direct IslandBenchApi calls; iOS: synchronous NSNotificationCenter posts in both directions. All on the main thread; the bridge micro-benchmark is not implemented." },
     "async": { "status": "not-applicable", "reason": "Only the island's ready message is deferred by one main-loop turn." }
   },
   "crossRuntime": {
@@ -85,6 +108,11 @@
       "id": "nativescript-template-gradle9",
       "description": "The NativeScript CLI generates the Android project, which is built on Gradle 9.3.1 / AGP 9.1.0 like the other island hosts instead of the runtime template's Gradle 8.14.3 / AGP 8.12.1, with two compatibility edits (scripts/build-android.sh).",
       "impact": "The shared host compiles against the same AndroidX and Compose versions as the other island candidates."
+    },
+    {
+      "id": "nativescript-ios-host-project",
+      "description": "The NativeScript CLI generates the Xcode project; scripts/generate-ios-project.rb adds the shared UIKit host, boots NativeScript from the host (NS_SWIFTUI_BOOT=1) and drops @nativescript/core's NativeScriptMainWindow.swift (NativeScript's own window boot, not Swift 6 concurrency-safe).",
+      "impact": "The UIKit host and its build settings match the other island candidates."
     },
     {
       "id": "nativescript-runtime-permissions",

@@ -1,0 +1,7 @@
+// Merged into the generated Xcode project by the NativeScript CLI. scripts/generate-ios-project.rb then adds the
+// shared island host (candidates/_island-host/ios) and makes it the application.
+// NS_SWIFTUI_BOOT=1 drops the template's main.m: the host's @main AppDelegate owns the process, and the island
+// embedding boots NativeScript through NativeScriptStart.
+NS_SWIFTUI_BOOT = 1
+IPHONEOS_DEPLOYMENT_TARGET = 16.4
+TARGETED_DEVICE_FAMILY = 1

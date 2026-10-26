@@ -164,6 +164,8 @@ class DetailIsland extends Island {
 
 class InsightsIsland extends Island {
   private readonly top: StackLayout;
+  /** The five top rows, reused across updates (empty rows collapse). */
+  private readonly topRows = [0, 1, 2, 3, 4].map(() => line(''));
   private readonly buckets: Label;
   private readonly digest: Label;
   private readyDrawn = false;
@@ -173,6 +175,9 @@ class InsightsIsland extends Island {
     this.root.addChild(heading('Top 5 by Option A'));
     this.top = new StackLayout();
     this.top.accessibilityIdentifier = 'mb.insights.top';
+    for (const l of this.topRows) {
+      this.top.addChild(l);
+    }
     this.root.addChild(this.top);
     this.root.addChild(heading('Option B distribution'));
     this.buckets = line('', 'mb.insights.buckets');
@@ -195,10 +200,11 @@ class InsightsIsland extends Island {
   private render(): void {
     const snap = this.model.insightsSnapshot();
     const width = labelWidth(this.model.itemCount);
-    this.top.removeChildren();
-    for (const [i, a] of snap.top) {
-      this.top.addChild(line(`${itemLabel(i, width)} — ${fmt(a)}`));
-    }
+    this.topRows.forEach((l, k) => {
+      const entry = snap.top[k];
+      l.text = entry === undefined ? '' : `${itemLabel(entry[0], width)} — ${fmt(entry[1])}`;
+      l.visibility = entry === undefined ? 'collapse' : 'visible';
+    });
     this.buckets.text = snap.buckets.join(' · ');
   }
 
