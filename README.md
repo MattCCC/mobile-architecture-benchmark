@@ -31,8 +31,7 @@ configuration and what has been verified on each platform.
   targets) and a README.
 - `tools/`: benchmark tooling. Node.js built-ins only, managed with npm.
 - `tools/acceptance/`: shared black-box check contract and verifier for artifact-bound acceptance receipts.
-- `tools/eligibility/`: fail-closed audit separating descriptive implementations from independently reviewed,
-  publishable comparison cells.
+- `tools/eligibility/`: fail-closed audits for candidate readiness and publishable physical-device result sets.
 - `design.md`: the normative workload, eligibility and reporting contract; every session records its content hash.
 
 ## Quick start

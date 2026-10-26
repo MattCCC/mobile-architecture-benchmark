@@ -27,9 +27,32 @@ export function auditRepository(repo) {
     eligible: rows.filter((r) => r.eligible).map((r) => `${r.candidateId}:${r.platform}`) };
 }
 
+export function auditResultSet(manifest, policy) {
+  const reasons = [];
+  const kind = manifest.resultSetKind ?? (String(manifest.schema ?? '').startsWith('early-bench.') ? 'early-session' : 'unknown');
+  if (manifest.status !== 'completed') reasons.push('result-set-not-completed');
+  if (policy.forbiddenResultSetKinds.includes(kind)) reasons.push(`forbidden-result-set-kind:${kind}`);
+  if (policy.requiresPhysicalDevice && manifest.environmentClass !== 'physical-device') reasons.push('not-a-physical-device-result-set');
+  if (!/^[0-9a-f]{64}$/.test(manifest.design?.sha256 ?? '')) reasons.push('design-hash-missing');
+  if (!/^[0-9a-f]{64}$/.test(manifest.buildPolicy?.sha256 ?? '')) reasons.push('build-policy-hash-missing');
+  const included = (manifest.candidates ?? []).filter((c) => c.status === 'included');
+  if (included.length < 2) reasons.push('fewer-than-two-included-candidates');
+  for (const candidate of included) {
+    if (candidate.buildClass !== policy.eligibleBuildClass) reasons.push(`${candidate.id}:non-release-build`);
+    if (!manifest.verification?.acceptanceReceipts?.[candidate.id]?.sha256) reasons.push(`${candidate.id}:acceptance-receipt-missing`);
+  }
+  return { eligible: reasons.length === 0, resultSetKind: kind, reasons };
+}
+
 if (process.argv[1] && import.meta.url === new URL(`file://${resolve(process.argv[1])}`).href) {
-  const { values } = parseArgs({ options: { repo: { type: 'string', default: '.' }, 'require-eligible': { type: 'boolean', default: false } } });
-  const result = auditRepository(resolve(values.repo));
+  const { values } = parseArgs({ options: { repo: { type: 'string', default: '.' }, manifest: { type: 'string' },
+    'require-eligible': { type: 'boolean', default: false } } });
+  const repo = resolve(values.repo);
+  const policy = JSON.parse(readFileSync(join(repo, 'config', 'eligibility.json'), 'utf8'));
+  const result = values.manifest
+    ? { schema: 'mobilebench.result-eligibility-audit/1.0.0', manifest: values.manifest,
+      ...auditResultSet(JSON.parse(readFileSync(resolve(values.manifest), 'utf8')), policy) }
+    : auditRepository(repo);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  if (values['require-eligible'] && result.rows.some((r) => !r.eligible)) process.exitCode = 1;
+  if (values['require-eligible'] && (result.eligible === false || result.rows?.some((r) => !r.eligible))) process.exitCode = 1;
 }
