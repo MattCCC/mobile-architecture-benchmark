@@ -130,24 +130,24 @@ committed in `results/early-2026-10-27/` (the first, emulator/simulator only, in
 
 ## Results (early sessions, 2026-10-26/27)
 
-Descriptive only, not a ranking: one Galaxy A16 phone session, two Android emulator sessions and up to four iOS
+Descriptive only, not a ranking: two Galaxy A16 phone sessions, two Android emulator sessions and up to four iOS
 simulator sessions on one Apple silicon host, with no independent review and the instrumentation-overhead check
 waived. Values are pooled medians (10–20 process-cold runs per startup/memory cell, 5 scroll runs of 8 seeded flings,
 3 energy runs of 60 s). Full tables with p95, min/max, warm start, every frame metric, artifact hashes and
 traceability: [results/early-2026-10-27/summary.md](results/early-2026-10-27/summary.md).
 
-**Galaxy A16 phone (SM-A165F, Android 16), 1 session**
+**Galaxy A16 phone (SM-A165F, Android 16), 2 sessions**
 
 | Candidate | Cold first frame | Cold fully drawn | Idle PSS | Scroll janky | Scroll p99 frame | Energy, 60 s scroll | Skin temp after |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| native | 259.0 ms | 263.5 ms | 49.05 MiB | 1.93 % | 33.4 ms | 0.651 mAh | 29.600 °C |
-| island-flutter | 263.0 ms | 267.5 ms | 48.56 MiB | 2.41 % | 47.5 ms | 0.661 mAh | 29.500 °C |
-| island-rn | 274.5 ms | 277.5 ms | 51.45 MiB | 2.15 % | 47.8 ms | 0.658 mAh | 29.500 °C |
-| island-nativescript | 300.5 ms | 304.5 ms | 70.71 MiB | 2.94 % | 50.0 ms | 0.709 mAh | 29.600 °C |
-| expo | 294.5 ms | 608.0 ms | 121.59 MiB | 2.43 % | 50.1 ms | 2.020 mAh | 29.700 °C |
-| repack | 284.5 ms | 705.0 ms | 117.41 MiB | 1.72 % | 50.2 ms | 1.910 mAh | 29.700 °C |
-| nativescript | 905.5 ms | 909.5 ms | 99.49 MiB | 1.28 % | 33.3 ms | 0.651 mAh | 29.600 °C |
-| flutter | 467.0 ms | 467.0 ms | 105.19 MiB | 1.98 % | 50.0 ms | 0.559 mAh | 29.600 °C |
+| native | 257.0 ms | 260.5 ms | 48.69 MiB | 1.98 % | 33.5 ms | 0.635 mAh | 29.600 °C |
+| island-flutter | 261.0 ms | 264.0 ms | 48.60 MiB | 2.41 % | 47.5 ms | 0.639 mAh | 29.650 °C |
+| island-rn | 266.5 ms | 270.5 ms | 51.54 MiB | 2.31 % | 48.2 ms | 0.639 mAh | 29.650 °C |
+| island-nativescript | 297.5 ms | 301.5 ms | 70.75 MiB | 2.79 % | 50.0 ms | 0.687 mAh | 29.750 °C |
+| expo | 292.5 ms | 604.5 ms | 122.57 MiB | 2.05 % | 50.1 ms | 1.970 mAh | 29.750 °C |
+| repack | 274.5 ms | 697.0 ms | 118.51 MiB | 1.72 % | 50.1 ms | 1.850 mAh | 29.700 °C |
+| nativescript | 902.5 ms | 906.0 ms | 99.49 MiB | 1.28 % | 34.0 ms | 0.633 mAh | 29.800 °C |
+| flutter | 458.5 ms | 458.5 ms | 108.29 MiB | 2.32 % | 50.1 ms | 0.548 mAh | 29.600 °C |
 
 **Android emulator (API 37), 2 sessions**
 
@@ -174,6 +174,7 @@ traceability: [results/early-2026-10-27/summary.md](results/early-2026-10-27/sum
 | repack | 448.0 ms | 70.27 MiB |
 | nativescript | 1787.7 ms | 44.94 MiB |
 | flutter@debug | 785.3 ms | 109.16 MiB |
+
 **Sizes (exact per artifact, MiB)**
 
 | Candidate | APK | Android installed | Android download est. | iOS sim .app | iOS sim zip-9 est. |
@@ -195,8 +196,17 @@ Notes:
   included); janky = gap over 1.5× the refresh period, pauses over 100 ms between flings excluded (a lower bound).
 - Energy is Android's batterystats power-model estimate for the app UID (software-unplugged over USB), not measured
   current. Thermals are the HAL skin temperature after the energy run.
+- The two phone sessions agree within a few percent on every metric above.
+- `expo` and `repack` energy (~3× the others) is app user-space CPU (~43 s vs ~14 s for native in a 60 s run; system
+  CPU, wakelocks and network equal). `island-rn` loads the same React Native runtime with a native List and costs the
+  same as native, so the cost sits in the React Native List under scrolling, most likely the default FlatList
+  virtualization (`windowSize` 21, no cell recycling) in `candidates/_rn-shared/ui/src/screens/ListScreen.tsx`.
+  These are untuned defaults, like every other candidate's standard list; not profiled per thread yet.
 - Island candidates measure the native shell at startup (islands load lazily on first open).
-- `@debug` iOS simulator builds (Flutter has no release simulator build) are never comparable with release builds.
+- `@debug` iOS simulator builds (Flutter has no release simulator build) are never comparable with release builds,
+  and are unstable: `flutter@debug` cold start was 2.29 s in one session and 0.78 s in the next on the same build,
+  the whole difference before the first Dart code runs (debug engine start-up). Treat them as unreliable.
+- One `island-flutter` phone scroll run ended with the app process gone (failed, not counted).
 - Missing: Android installed size on the emulator (the DiskStats cache did not refresh; the phone has it), iOS
   scroll frames (the simulator reports no hitch or frame data), AAB download estimates (needs bundletool), and
   energy/thermals on the emulator and simulator (no battery or thermal model). Physical iPhone runs need code signing.
