@@ -287,7 +287,8 @@ const SIZE_FAMILIES = [
 ];
 
 function platformTitle(p) {
-  return p === 'android' ? 'Android emulator' : 'iOS simulator';
+  // Android sessions run on the emulator or a physical device (--serial); the environment column tells them apart.
+  return p === 'android' ? 'Android (emulator and physical devices, see the environment column)' : 'iOS simulator';
 }
 
 function sectionFor(model, buildClassFilter) {

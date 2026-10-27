@@ -6,8 +6,8 @@ feature. All candidates are measured with one shared method, the same determinis
 acceptance checks.
 
 > **Status: work in progress.** All eight candidates build and pass black-box acceptance on the Android emulator
-> and the iOS simulator; first descriptive early results are below (see [Current status](#current-status)). Emulator and
-> simulator sessions are descriptive and not representative of physical devices.
+> and the iOS simulator; descriptive early results from a Galaxy A16 phone, the emulator and the simulator are below
+> (see [Results](#results-early-sessions-2026-102627)). No result is a ranking yet.
 
 ## What is being compared
 
@@ -125,43 +125,97 @@ Each session writes `results/local/sessions/<sessionId>/` containing:
 `combine.mjs` reads those files and writes the **human-readable report** (`summary.md`): per-session medians and
 pooled N / median / p95 / min / max for each candidate and metric, exact artifact sizes, debug builds in their own
 section, and a shared-session view for comparing candidates side by side. The output is deterministic, and
-values are pooled only when the method, environment, artifact and fixture all match. The first combined summary is
-committed in `results/early-2026-10-26/`.
+values are pooled only when the method, environment, artifact and fixture all match. The current combined summary is
+committed in `results/early-2026-10-27/` (the first, emulator/simulator only, in `results/early-2026-10-26/`).
 
-## First results (2026-10-26, early sessions)
+## Results (early sessions, 2026-10-26/27)
 
-Descriptive only: Android emulator and iOS simulator on one Apple silicon host, not physical devices, and not a
-ranking. Medians of 10 (Android) or 10–20 (iOS) process-cold runs per candidate. Full tables with p95, min/max,
-warm start, sizes, artifact hashes and traceability: [results/early-2026-10-26/summary.md](results/early-2026-10-26/summary.md).
+Descriptive only, not a ranking: one Galaxy A16 phone session, two Android emulator sessions and up to four iOS
+simulator sessions on one Apple silicon host, with no independent review and the instrumentation-overhead check
+waived. Values are pooled medians (10–20 process-cold runs per startup/memory cell, 5 scroll runs of 8 seeded flings,
+3 energy runs of 60 s). Full tables with p95, min/max, warm start, every frame metric, artifact hashes and
+traceability: [results/early-2026-10-27/summary.md](results/early-2026-10-27/summary.md).
 
-| Candidate | Android first frame | Android fully drawn | Android idle PSS | iOS first usable UI | iOS idle footprint |
+**Galaxy A16 phone (SM-A165F, Android 16), 1 session**
+
+| Candidate | Cold first frame | Cold fully drawn | Idle PSS | Scroll janky | Scroll p99 frame | Energy, 60 s scroll | Skin temp after |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| native | 259.0 ms | 263.5 ms | 49.05 MiB | 1.93 % | 33.4 ms | 0.651 mAh | 29.600 °C |
+| island-flutter | 263.0 ms | 267.5 ms | 48.56 MiB | 2.41 % | 47.5 ms | 0.661 mAh | 29.500 °C |
+| island-rn | 274.5 ms | 277.5 ms | 51.45 MiB | 2.15 % | 47.8 ms | 0.658 mAh | 29.500 °C |
+| island-nativescript | 300.5 ms | 304.5 ms | 70.71 MiB | 2.94 % | 50.0 ms | 0.709 mAh | 29.600 °C |
+| expo | 294.5 ms | 608.0 ms | 121.59 MiB | 2.43 % | 50.1 ms | 2.020 mAh | 29.700 °C |
+| repack | 284.5 ms | 705.0 ms | 117.41 MiB | 1.72 % | 50.2 ms | 1.910 mAh | 29.700 °C |
+| nativescript | 905.5 ms | 909.5 ms | 99.49 MiB | 1.28 % | 33.3 ms | 0.651 mAh | 29.600 °C |
+| flutter | 467.0 ms | 467.0 ms | 105.19 MiB | 1.98 % | 50.0 ms | 0.559 mAh | 29.600 °C |
+
+**Android emulator (API 37), 2 sessions**
+
+| Candidate | Cold first frame | Cold fully drawn | Idle PSS | Scroll janky | Scroll p99 frame |
 | --- | --- | --- | --- | --- | --- |
-| native | 160.5 ms | 163.0 ms | 23.6 MiB | 373.9 ms | 18.0 MiB |
-| island-flutter | 154.5 ms | 156.0 ms | 23.9 MiB | 431.1 ms (debug) | 19.0 MiB (debug) |
-| island-rn | 164.5 ms | 166.0 ms | 26.9 MiB | 395.2 ms | 18.8 MiB |
-| island-nativescript | 160.5 ms | 162.5 ms | 46.7 MiB | 387.0 ms | 18.6 MiB |
-| expo | 151.5 ms | 348.5 ms | 107.0 MiB | 1677.9 ms | 74.1 MiB |
-| repack | 145.0 ms | 369.5 ms | 97.0 MiB | 447.9 ms | 70.1 MiB |
-| nativescript | 320.5 ms | 322.5 ms | 78.0 MiB | 1866.3 ms¹ | 48.8 MiB¹ |
-| flutter | 667.0 ms | 667.0 ms | 66.7 MiB | 2286.6 ms¹ (debug, n=8) | 116.2 MiB¹ (debug, n=9) |
+| native | 162.5 ms | 164.5 ms | 23.41 MiB | 5.24 % | 64.3 ms |
+| island-flutter | 162.5 ms | 163.5 ms | 24.02 MiB | 9.56 % | 67.0 ms |
+| island-rn | 165.0 ms | 167.0 ms | 26.88 MiB | 8.28 % | 66.3 ms |
+| island-nativescript | 169.0 ms | 169.5 ms | 46.84 MiB | 9.90 % | 64.1 ms |
+| expo | 160.5 ms | 348.5 ms | 107.23 MiB | 6.86 % | 52.9 ms |
+| repack | 162.0 ms | 461.0 ms | 97.06 MiB | 7.13 % | 64.2 ms |
+| nativescript | 321.5 ms | 324.5 ms | 77.99 MiB | 2.84 % | 56.7 ms |
+| flutter | 667.0 ms | 667.0 ms | 66.64 MiB | 29.46 % | 84.0 ms |
 
-¹ Measured in a follow-up iOS session after their iOS builds gained the `proc.anchor` and `mem` markers (other cells unchanged); flutter had 3 instrument errors in 20 runs. Island
-numbers measure the native shell at startup (islands load lazily on first open). iOS debug builds are reported
-separately and are not comparable with release builds.
+**iOS simulator (iPhone 17, iOS 27)**
+
+| Candidate | Cold to first usable UI | Idle footprint |
+| --- | --- | --- |
+| native | 376.1 ms | 17.95 MiB |
+| island-flutter@debug | 432.1 ms | 19.03 MiB |
+| island-rn | 394.4 ms | 18.74 MiB |
+| island-nativescript | 387.0 ms | 18.58 MiB |
+| expo | 1697.9 ms | 74.24 MiB |
+| repack | 448.0 ms | 70.27 MiB |
+| nativescript | 1787.7 ms | 44.94 MiB |
+| flutter@debug | 785.3 ms | 109.16 MiB |
+**Sizes (exact per artifact, MiB)**
+
+| Candidate | APK | Android installed | Android download est. | iOS sim .app | iOS sim zip-9 est. |
+| --- | --- | --- | --- | --- | --- |
+| native | 1.33 MiB | 6.47 MiB | 1.26 MiB | 2.08 MiB | 0.57 MiB |
+| island-flutter | 16.15 MiB | 21.74 MiB | 8.35 MiB | – | – |
+| island-flutter@debug | – | – | – | 99.10 MiB | 30.95 MiB |
+| island-rn | 15.42 MiB | 23.14 MiB | 7.16 MiB | 23.02 MiB | 6.12 MiB |
+| island-nativescript | 34.57 MiB | 65.38 MiB | 17.08 MiB | 71.33 MiB | 22.52 MiB |
+| expo | 27.75 MiB | 33.58 MiB | 11.16 MiB | 38.31 MiB | 10.09 MiB |
+| repack | 19.17 MiB | 22.61 MiB | 7.65 MiB | 24.21 MiB | 6.73 MiB |
+| nativescript | 30.10 MiB | 41.01 MiB | 12.72 MiB | 70.93 MiB | 22.42 MiB |
+| flutter | 15.45 MiB | 16.11 MiB | 7.36 MiB | – | – |
+| flutter@debug | – | – | – | 98.27 MiB | 30.76 MiB |
+
+Notes:
+
+- Scroll frames come from SurfaceFlinger presented-frame gaps on the app layer (works for every toolkit, Flutter
+  included); janky = gap over 1.5× the refresh period, pauses over 100 ms between flings excluded (a lower bound).
+- Energy is Android's batterystats power-model estimate for the app UID (software-unplugged over USB), not measured
+  current. Thermals are the HAL skin temperature after the energy run.
+- Island candidates measure the native shell at startup (islands load lazily on first open).
+- `@debug` iOS simulator builds (Flutter has no release simulator build) are never comparable with release builds.
+- Missing: Android installed size on the emulator (the DiskStats cache did not refresh; the phone has it), iOS
+  scroll frames (the simulator reports no hitch or frame data), AAB download estimates (needs bundletool), and
+  energy/thermals on the emulator and simulator (no battery or thermal model). Physical iPhone runs need code signing.
 
 ## What is measured today
 
-| Measurement | Android emulator | iOS simulator |
-| --- | --- | --- |
-| Cold startup to first usable / fully drawn UI | yes | yes |
-| Activity-warm startup | yes | not applicable |
-| Idle memory on the List screen | PSS | physical footprint |
-| Artifact size | APK (arm64) and AAB | simulator `.app` |
+| Measurement | Android phone | Android emulator | iOS simulator |
+| --- | --- | --- | --- |
+| Cold startup to first frame / fully drawn (FUI on iOS) | yes | yes | yes |
+| Activity-warm startup | yes | yes | not applicable |
+| Idle memory on the List screen | PSS | PSS | physical footprint |
+| Scroll frames: count, janky %, p50/p90/p99 | yes | yes | unavailable |
+| Energy (power-model estimate) | yes | not collected | not collected |
+| Thermals (skin temperature, thermal status per block) | yes | not collected | not collected |
+| Artifact, installed and download-estimate sizes | yes | artifact + download | `.app`, installed, zip-9 estimate |
 
-**Not measured yet:** frame performance and jank, energy, thermals, installed or download size, and anything on
-physical devices. There is **no composite score or overall ranking**; results are descriptive, per metric. A
-candidate/platform cell becomes rankable only after accepted independent review and a passing eligibility audit
-(`tools/eligibility/`). Method details: `tools/early-bench/README.md`.
+There is **no composite score or overall ranking**; results are descriptive, per metric. A candidate/platform cell
+becomes rankable only after accepted independent review and a passing eligibility audit (`tools/eligibility/`).
+Method details: `tools/early-bench/README.md`.
 
 ## Current status
 
@@ -171,8 +225,8 @@ candidate/platform cell becomes rankable only after accepted independent review 
 | Unit and contract tests | `make check` passes |
 | Acceptance | Black-box drivers for Android and iOS (`tools/acceptance`); all 8 candidates pass all checks on both platforms, with `instrumentation-overhead` waived (design §6.7), which keeps results descriptive |
 | Benchmark runner | Implemented (`tools/early-bench`); a dry run admits all 8 candidates on both platforms |
-| Reference devices | Android AVD `mobilebench_api37` (API 37) and iOS simulator `mobilebench-iphone` (iPhone 17, iOS 27.0), created locally |
-| Published results | First early sessions (2026-10-26), see [First results](#first-results-2026-10-26-early-sessions) |
+| Reference devices | Android AVD `mobilebench_api37` (API 37), physical Samsung Galaxy A16 (SM-A165F, Android 16, `--serial`) and iOS simulator `mobilebench-iphone` (iPhone 17, iOS 27.0) |
+| Published results | Early sessions (2026-10-26/27), see [Results](#results-early-sessions-2026-102627) |
 
 Next steps: early sessions on both platforms and their `summary.md` tables; then the shared BenchKit with its
 A/B overhead experiment and physical devices, which are needed for eligible (rankable) results.
