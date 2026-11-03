@@ -1,0 +1,4 @@
+generated/
+.kotlin/
+ios/*.xcodeproj/
+.keys/

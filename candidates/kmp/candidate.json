@@ -1,0 +1,278 @@
+{
+  "schema": "mobilebench.candidate/1.0.0",
+  "id": "kmp",
+  "displayName": "Kotlin Multiplatform (shared Compose UI)",
+  "role": "candidate",
+  "variantOf": null,
+  "family": "kotlin-multiplatform",
+  "architectureClass": "cross-platform-shared-compose-ui",
+  "owner": "kmp",
+  "independentReview": {
+    "status": "pending",
+    "requiredExpertise": "Compose Multiplatform, Kotlin/Native and Android production performance"
+  },
+  "status": {
+    "android": "implemented",
+    "ios": "implemented"
+  },
+  "statusNote": "Shared Kotlin state, stream scheduler, restoration, navigation and all four Compose screens. Native adapters provide OS services and candidate-local instrumentation. Bundled replay only; mb.server and network datasets are rejected.",
+  "platforms": {
+    "android": {
+      "applicationId": "org.example.mobilebench.kmpapp",
+      "activity": "org.example.mobilebench.kmpapp/.MainActivity",
+      "contentSurface": "activity-window",
+      "uiToolkit": "Compose Multiplatform",
+      "runtime": "ART (Kotlin, R8-optimized release)",
+      "listPrimitive": "LazyColumn (shared commonMain)",
+      "navigation": "Compose Multiplatform Navigation NavHost (default transitions)",
+      "animation": "animateFloatAsState + graphicsLayer (shared, 300 ms cubic-bezier(0.42, 0, 0.58, 1))",
+      "streamClient": "Shared Kotlin coroutine replay; background line reads, absolute monotonic schedule, main-thread delivery",
+      "streamSource": "replay",
+      "benchmarkBuild": {
+        "minSdk": 24,
+        "targetSdk": 36,
+        "abi": "arm64-v8a",
+        "buildClass": "release"
+      },
+      "instrumentationId": "kmp-android-local-interim/1",
+      "persistence": "app-private file (Context.filesDir), temp file + rename",
+      "artifacts": {
+        "apk": "androidApp/build/outputs/apk/release/androidApp-release.apk"
+      },
+      "sizeClassification": [
+        {
+          "glob": "lib/*/*.so",
+          "category": "framework"
+        },
+        {
+          "glob": "classes*.dex",
+          "category": "app-code"
+        },
+        {
+          "glob": "assets/fixtures/*",
+          "category": "benchmark-payload"
+        },
+        {
+          "glob": "resources.arsc",
+          "category": "other"
+        },
+        {
+          "glob": "res/**",
+          "category": "other"
+        },
+        {
+          "glob": "META-INF/**",
+          "category": "other"
+        },
+        {
+          "glob": "assets/dexopt/*",
+          "category": "framework"
+        }
+      ],
+      "sizeNote": "DEX includes app code and Android Compose dependencies; these cannot be separated statically."
+    },
+    "ios": {
+      "bundleId": "org.example.mobilebench.kmpapp",
+      "contentSurface": "compose-skia",
+      "uiToolkit": "Compose Multiplatform",
+      "runtime": "Kotlin/Native AOT + Compose Skia (release framework)",
+      "listPrimitive": "LazyColumn (shared commonMain)",
+      "navigation": "Compose Multiplatform Navigation NavHost (default transitions)",
+      "animation": "animateFloatAsState + graphicsLayer (shared, 300 ms cubic-bezier(0.42, 0, 0.58, 1))",
+      "streamClient": "Shared Kotlin coroutine replay; background line reads, absolute monotonic schedule, main-thread delivery",
+      "streamSource": "replay",
+      "benchmarkBuild": {
+        "deploymentTarget": "16.4",
+        "arch": "arm64",
+        "buildClass": "release"
+      },
+      "instrumentationId": "kmp-ios-local-interim/1",
+      "persistence": "Application Support file, Data.write(options: .atomic)",
+      "artifacts": {
+        "app": "ios/build/Build/Products/Release-iphonesimulator/MobileBenchKmp.app"
+      },
+      "sizeClassification": [
+        {
+          "glob": "MobileBenchKmp",
+          "category": "app-code"
+        },
+        {
+          "glob": "fixtures/*",
+          "category": "benchmark-payload"
+        },
+        {
+          "glob": "**",
+          "category": "other"
+        }
+      ],
+      "sizeNote": "The executable statically links Kotlin/Native and Compose/Skia; app code and framework code cannot be separated statically."
+    }
+  },
+  "versions": {
+    "shared": {
+      "kotlin": "2.4.21",
+      "composeMultiplatform": "1.12.2",
+      "composeCompiler": "2.4.21",
+      "navigation": "2.10.0-rc01",
+      "coroutines": "1.10.2",
+      "serializationJson": "1.9.0"
+    },
+    "android": {
+      "gradle": "9.7.0",
+      "androidGradlePlugin": "9.3.1",
+      "compileSdk": 37,
+      "targetSdk": 36,
+      "minSdk": 24,
+      "jdk": "17",
+      "activityCompose": "1.13.0"
+    },
+    "ios": {
+      "xcode": "27.1 (27A9275)",
+      "deploymentTarget": "16.4",
+      "swiftLanguageMode": "6",
+      "xcodeproj": "1.28.1"
+    }
+  },
+  "toolchains": [
+    "node",
+    "jdk17",
+    "android-sdk",
+    "xcode",
+    "ios-sim-runtime"
+  ],
+  "remoteLoading": {
+    "R1": {
+      "status": "applicable",
+      "note": "Insights is part of the installed artifact"
+    },
+    "R2": {
+      "status": "not-applicable",
+      "reason": "This candidate ships compiled Kotlin and statically linked iOS Compose code; it has no independent remote executable feature loader.",
+      "source": "design \u00a714.7 note 4"
+    },
+    "R3": {
+      "status": "not-applicable",
+      "reason": "as R2",
+      "source": "design \u00a714.7 note 4"
+    },
+    "R4": {
+      "status": "not-applicable",
+      "reason": "as R2 (offline startup itself is measured by A1o for every candidate)",
+      "source": "design \u00a714.7 note 4"
+    },
+    "R5": {
+      "status": "not-applicable",
+      "reason": "as R2",
+      "source": "design \u00a714.7 note 4"
+    },
+    "R6": {
+      "status": "not-applicable",
+      "reason": "as R2",
+      "source": "design \u00a714.7 note 4"
+    },
+    "R7": {
+      "status": "not-applicable",
+      "reason": "Single runtime: no second UI runtime to communicate with.",
+      "source": "design \u00a714.7 note 5"
+    },
+    "R8s": {
+      "status": "not-applicable",
+      "reason": "No bridge: UI code runs natively.",
+      "source": "design \u00a714.7 note 6"
+    },
+    "R8a": {
+      "status": "not-applicable",
+      "reason": "No bridge: UI code runs natively.",
+      "source": "design \u00a714.7 note 6"
+    },
+    "R9": {
+      "status": "not-applicable",
+      "reason": "as R2",
+      "source": "design \u00a714.7 note 4"
+    }
+  },
+  "bridge": {
+    "sync": {
+      "status": "not-applicable",
+      "reason": "No bridge: UI code runs natively (design \u00a714.7 note 6)."
+    },
+    "async": {
+      "status": "not-applicable",
+      "reason": "No bridge: UI code runs natively (design \u00a714.7 note 6)."
+    }
+  },
+  "crossRuntime": {
+    "applicable": false,
+    "reason": "single runtime"
+  },
+  "contentLayerPattern": {
+    "android": "*org.example.mobilebench.kmpapp/*MainActivity*"
+  },
+  "instrumentExpectations": {
+    "android": {
+      "A-F1": "expected-valid",
+      "A-F2": "expected-valid",
+      "FrameTimingMetric": "diagnostic"
+    },
+    "ios": {
+      "XCTHitchMetric": "pilot",
+      "XCTOSSignpostMetric": "expected-valid"
+    }
+  },
+  "adapters": [
+    {
+      "name": "benchkit-android-local",
+      "path": "androidApp/src/main/kotlin/org/example/mobilebench/kmpapp/platform",
+      "kind": "instrumentation",
+      "note": "Native reference BenchKit semantics; Compose draw probes in shared code"
+    },
+    {
+      "name": "benchkit-ios-local",
+      "path": "ios/App/Bench",
+      "kind": "instrumentation",
+      "note": "Native reference BenchKit semantics; Compose draw probes in shared code"
+    }
+  ],
+  "deviations": [
+    {
+      "id": "benchkit-candidate-local",
+      "description": "Markers, probes and the FUI gate come from candidate-local BenchKit code with the design's semantics, because the shared BenchKit libraries do not exist yet; its facade has one method per probe kind instead of probeDrawn(kind, i, token). Android emits markers with android.os.Trace (the same atrace data as the NDK ATrace API) instead of a C core over JNI; mirrored logcat lines carry an extra diagnostic `t=<elapsedRealtimeNanos>` field; the Android `launch` marker carries an extra `pst=` (process start) field.",
+      "impact": "Replace with the shared libraries before eligible runs; the A/B overhead check (design \u00a76.7) must run on the shared version."
+    },
+    {
+      "id": "stream-source-replay",
+      "description": "The update stream is replayed in-app from the bundled first 10 000 frames of the profile on the design's absolute schedule (message k due at t0 + (k - from) / rate on the monotonic clock, catch-up after a reconnect). After the last frame the source sends an `e` frame (status Ended). `mb.server` is rejected with launch-config-invalid until the WebSocket source is implemented.",
+      "impact": "No local-server sessions, no fault injection, no server byte accounting; journeys longer than 10 000 messages end the stream."
+    },
+    {
+      "id": "network-dataset-not-implemented",
+      "description": "`mb.dataset=network` is rejected with launch-config-invalid.",
+      "impact": "Scenario A1n not runnable yet."
+    },
+    {
+      "id": "ios-touch-observer-missing",
+      "description": "The candidate-local iOS BenchKit does not install the key-window touch observer (`input.down`, `input.move.first`, `input.move.last`, `input.up`).",
+      "impact": "iOS input-to-X metrics need the shared iOS BenchKit."
+    },
+    {
+      "id": "android-selected-as-checked",
+      "description": "Compose reports the selected state of a `Modifier.selectable` element with a non-Tab role as AccessibilityNodeInfo checkable/checked, not isSelected.",
+      "impact": "The Android driver must read selected OR checked for option buttons."
+    }
+  ],
+  "confounds": [
+    {
+      "id": "agp-r8-version",
+      "detail": "AGP 9.3.1 and its bundled R8, pinned within the KMP compatibility range."
+    },
+    {
+      "id": "navigation-release-candidate",
+      "detail": "Compose 1.12.2 ships Navigation 2.10.0-rc01; pinned as documented by JetBrains."
+    },
+    {
+      "id": "xcode-compatibility",
+      "detail": "Local Xcode 27.1 is newer than the Xcode 26.4 listed in the Kotlin 2.4.21 compatibility table."
+    }
+  ],
+  "sharedBuildInputs": []
+}

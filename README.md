@@ -5,9 +5,10 @@ reference app: a long, live-updating list of items with selectable options, a de
 feature. All candidates are measured with one shared method, the same deterministic workload and the same functional
 acceptance checks.
 
-> **Status: work in progress.** All eight candidates build and pass black-box acceptance on the Android emulator
-> and the iOS simulator; descriptive early results from a Galaxy A16 phone, the emulator and the simulator are below
-> (see [Results](#results-early-sessions-2026-102627)). No result is a ranking yet.
+> **Status: work in progress.** Nine candidates are registered, including shared Compose Multiplatform UI.
+> Published October 26/27 results cover the original eight artifacts; their islands still used a native List.
+> The rebuilt islands and KMP pass functional acceptance on the Galaxy A16 and iOS simulator; fresh measurements are pending.
+> No result is a ranking yet; see [Results](#results-early-sessions-2026-102627).
 
 ## What is being compared
 
@@ -22,6 +23,7 @@ The entire app, every screen, is written in one framework.
 
 | Id | Architecture | Android build | iOS simulator build |
 | --- | --- | --- | --- |
+| `kmp` | Kotlin Multiplatform with shared Compose UI | release | release |
 | `native` | Fully native: Jetpack Compose (Android) and UIKit (iOS) | release | release |
 | `flutter` | Flutter | release | debug (Flutter has no release simulator build) |
 | `expo` | React Native with Expo | release | release |
@@ -236,10 +238,10 @@ Method details: `tools/early-bench/README.md`.
 
 | Area | State |
 | --- | --- |
-| Candidates | 8 implemented; all build for Android and the iOS simulator (`flutter` and `island-flutter` iOS simulator builds are debug, a Flutter limitation) |
+| Candidates | 9 implemented; all build for Android and the iOS simulator (`flutter` and `island-flutter` iOS simulator builds are debug, a Flutter limitation) |
 | Unit and contract tests | `make check` passes |
-| Acceptance | Black-box drivers for Android and iOS (`tools/acceptance`); all 8 candidates pass all checks on both platforms, with `instrumentation-overhead` waived (design §6.7), which keeps results descriptive |
-| Benchmark runner | Implemented (`tools/early-bench`); a dry run admits all 8 candidates on both platforms |
+| Acceptance | Black-box drivers for Android and iOS (`tools/acceptance`); the rebuilt islands and KMP pass on Galaxy A16 and iOS simulator; the other five retain their passing artifact-bound receipts, with `instrumentation-overhead` waived (design §6.7), which keeps results descriptive |
+| Benchmark runner | Implemented (`tools/early-bench`); each session verifies artifact hashes and acceptance receipts before admission |
 | Reference devices | Android AVD `mobilebench_api37` (API 37), physical Samsung Galaxy A16 (SM-A165F, Android 16, `--serial`) and iOS simulator `mobilebench-iphone` (iPhone 17, iOS 27.0) |
 | Published results | Early sessions (2026-10-26/27), see [Results](#results-early-sessions-2026-102627) |
 
