@@ -3,7 +3,7 @@ MB_CANDIDATES += island-rn
 
 MB_ISLAND_RN_DIR := candidates/island-rn
 MB_ISLAND_RN_RN := $(MB_ISLAND_RN_DIR)/rn
-MB_ISLAND_RN_GRADLE := $(MB_ISLAND_RN_RN)/android/gradlew -p $(MB_ISLAND_RN_DIR)/android --console=plain
+MB_ISLAND_RN_GRADLE := candidates/native/android/gradlew -p $(MB_ISLAND_RN_DIR)/android --console=plain
 MB_ISLAND_RN_APK := $(MB_ISLAND_RN_DIR)/android/app/build/outputs/apk/release/app-release.apk
 MB_ISLAND_RN_APP := $(MB_ISLAND_RN_DIR)/build/ios/Build/Products/Release-iphonesimulator/MBIslandRn.app
 
@@ -21,7 +21,7 @@ check-island-rn: deps-island-rn prepare-island-rn
 	cd $(MB_ISLAND_RN_RN) && npx eslint --config .eslintrc.js index.js BuildProbe.ts '../../_island-rn-ui/src/**/*.{ts,tsx}' '../../_island-rn-ui/benchkit/src/**/*.ts'
 	node --test candidates/_island-rn-ui/test/*.test.ts
 	cd candidates/_island-host/ios/Core && swift test
-	cd $(MB_ISLAND_RN_DIR)/android && ../rn/android/gradlew --console=plain :app:testDebugUnitTest
+	$(MB_ISLAND_RN_GRADLE) :app:testDebugUnitTest
 	node candidates/_island-host/tools/host-hash.mjs --check $(MB_ISLAND_RN_DIR)/candidate.json
 
 package-island-rn-android: deps-island-rn

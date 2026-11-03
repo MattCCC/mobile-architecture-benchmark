@@ -1,13 +1,20 @@
 import MobileBenchCore
 import UIKit
 
-/// The two island screens (decision 38): the item Detail screen and the Insights feature.
+/// List opens during launch; Detail and Insights share its runtime.
 enum IslandKind: String {
+    case list
     case detail
     case insights
 
     /// Component name registered by runtimes that address islands by name.
-    var module: String { self == .detail ? "MBDetailIsland" : "MBInsightsIsland" }
+    var module: String {
+        switch self {
+        case .list: return "MBListIsland"
+        case .detail: return "MBDetailIsland"
+        case .insights: return "MBInsightsIsland"
+        }
+    }
 }
 
 /// Where the Insights island code came from for one open (design §8.10).

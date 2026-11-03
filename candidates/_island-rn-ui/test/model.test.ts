@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHostMessage } from '../src/protocol.ts';
 import { IslandRegistry } from '../src/model.ts';
+import { RenderCounter } from '../src/renderCounter.ts';
 
 class Marks {
   readonly marks: string[] = [];
@@ -106,4 +107,62 @@ test('insights island: snapshot updates notify subscribers, digest text', () => 
   // Messages for an unknown island instance are buffered, not applied to another one.
   registry.dispatch({ t: 'ins', sid: 9, s: 30, top: [], b: [0, 0, 0, 0, 0] });
   assert.equal(model.insightsSnapshot().seq, 11);
+});
+
+const listInit = {
+  t: 'init', sid: 5, k: 'list', n: 2, s: 0, tk: 'nav:0', xr: 0,
+  rows: [[1, 100, 200, 300, -1], [2, 400, 500, 600, 0]], summary: [1, 400, 0], anchor: 0,
+};
+
+test('List validates complete render snapshots and preserves the host summary', () => {
+  assert.ok(parseHostMessage(listInit));
+  assert.equal(parseHostMessage({ ...listInit, rows: [listInit.rows[0]] }), null);
+  assert.equal(parseHostMessage({ ...listInit, summary: [1, 400] }), null);
+  assert.equal(parseHostMessage({ ...listInit, anchor: 2 }), null);
+  const model = new IslandRegistry(new Marks()).adopt(listInit)!;
+  assert.equal(model.kind, 'list');
+  assert.deepEqual(model.summary.get(), [1, 400, 0]);
+  assert.deepEqual(model.rows[1].get(), [2, 400, 500, 600, 0]);
+});
+
+test('List streams notify only the changed row; selection can change at the same stream sequence', () => {
+  const registry = new IslandRegistry(new Marks());
+  const model = registry.adopt(listInit)!;
+  const calls = [0, 0];
+  model.rows.forEach((r, i) => r.subscribe(() => calls[i]++));
+  registry.dispatch({ t: 'row', sid: 5, s: 1, i: 0, row: [1, 110, 210, 310, -1], summary: [1, 400, 0] });
+  assert.deepEqual(calls, [1, 0]);
+  registry.dispatch({ t: 'row', sid: 5, s: 1, i: 0, row: [1, 110, 210, 310, 1], summary: [2, 610, 1] });
+  assert.deepEqual(model.rows[0].get(), [1, 110, 210, 310, 1]);
+  assert.deepEqual(model.summary.get(), [2, 610, 1]);
+  registry.dispatch({ ...listInit, t: 'snap', s: 1 });
+  assert.deepEqual(model.summary.get(), [2, 610, 1], 'stale selection snapshot must not undo a tap');
+  registry.dispatch({ t: 'row', sid: 5, s: 0, i: 1, row: [2, 0, 0, 0, -1], summary: [0, 0, 2] });
+  assert.deepEqual(model.rows[1].get(), listInit.rows[1]);
+  assert.deepEqual(calls, [2, 0]);
+});
+
+test('List applies buffered host updates and fresh snapshots on return from another screen', () => {
+  const registry = new IslandRegistry(new Marks());
+  registry.dispatch({ t: 'row', sid: 5, s: 8, i: 1, row: [2, 800, 900, 1000, 2], summary: [1, 1000, 3] });
+  const model = registry.adopt(listInit)!;
+  assert.equal(model.lastSeq, 8);
+  assert.deepEqual(model.summary.get(), [1, 1000, 3]);
+  registry.remove(5);
+  const reopened = registry.adopt({ ...listInit, sid: 6, s: 12, anchor: 1, summary: [0, 0, 4] })!;
+  assert.equal(reopened.anchor, 1);
+  assert.equal(reopened.lastSeq, 12);
+  assert.deepEqual(reopened.summary.get(), [0, 0, 4]);
+});
+
+test('row-render instrumentation batches reports without losing counts', async () => {
+  const reports: number[] = [];
+  const counter = new RenderCounter((n) => reports.push(n));
+  counter.rendered(); counter.rendered(); counter.rendered();
+  assert.deepEqual(reports, []);
+  await Promise.resolve();
+  assert.deepEqual(reports, [3]);
+  counter.rendered();
+  await Promise.resolve();
+  assert.deepEqual(reports, [3, 1]);
 });

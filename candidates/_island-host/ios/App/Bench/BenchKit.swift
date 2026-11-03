@@ -307,7 +307,7 @@ enum BenchKit {
     }
 
     /// Summary probe draw callback: token `fui0` until FUI, then `rev:<selectionRevision>`.
-    static func summaryDrawn() {
+    static func summaryDrawn(revision: Int? = nil, selected: Int? = nil) {
         if gateArmed {
             summaryDrawnForGate = true
             checkGate()
@@ -315,9 +315,10 @@ enum BenchKit {
         }
         guard fuiReached else { return }
         let s = stateProvider()
-        if s.revision != lastRespRev {
-            lastRespRev = s.revision
-            mark("resp", "rev=\(s.revision);sel=\(s.selected)")
+        let rev = revision ?? s.revision
+        if rev != lastRespRev {
+            lastRespRev = rev
+            mark("resp", "rev=\(rev);sel=\(selected ?? s.selected)")
         }
     }
 
@@ -439,7 +440,11 @@ enum BenchKit {
     /// Island draw probe (main thread). Kinds: `screen` (index 2 = detail, 3 = insights; token `nav:` / `fg:` /
     /// `restore:`) and `insights` (token `ready:<version>:<open>`).
     static func islandProbeDrawn(kind: String, index: Int, token: String) {
-        if kind == "screen" {
+        if kind == "list" { listLayout(index) }
+        else if kind == "row" { rowDrawn(index) }
+        else if kind == "summary", let selected = token.split(separator: ":").last.flatMap({ Int($0) }) { summaryDrawn(revision: index, selected: selected) }
+        else if kind == "screen" {
+            if index == 0 { tokenDrawn(route: "list", token: token) }
             if index == 2, let route = currentDetailRoute {
                 tokenDrawn(route: route, token: token)
             } else if index == 3 {

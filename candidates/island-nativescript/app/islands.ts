@@ -7,6 +7,7 @@ import { IslandRegistry } from '../../_island-rn-ui/src/model.ts';
 import type { IslandModel } from '../../_island-rn-ui/src/model.ts';
 import { fmt, itemLabel, labelWidth, optionText } from '../../_rn-shared/ui/src/domain/format.ts';
 import * as bridge from './bridge';
+import { ListIsland } from './list-island';
 
 const TEXT = new Color('#111111');
 const MUTED = new Color('#5F6368');
@@ -233,7 +234,7 @@ function line(value: string, id?: string): Label {
 }
 
 const registry = new IslandRegistry({ mark: bridge.mark });
-const islands = new Map<number, Island>();
+const islands = new Map<number, { root: View; drawn(): void; dispose(): void }>();
 
 bridge.start({
   create(sid: number, initJson: string): View | null {
@@ -241,7 +242,7 @@ bridge.start({
     if (model === null || model.sid !== sid) {
       return null;
     }
-    const island = model.kind === 'detail' ? new DetailIsland(model) : new InsightsIsland(model);
+    const island = model.kind === 'list' ? new ListIsland(model) : model.kind === 'detail' ? new DetailIsland(model) : new InsightsIsland(model);
     islands.set(sid, island);
     bridge.onEachDraw(island.root, () => island.drawn());
     // The host registers the island when this call returns, so `ready` (answered with `snap`) goes out after it.

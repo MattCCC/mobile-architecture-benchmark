@@ -25,6 +25,7 @@ private class FlutterIslandEmbedding : IslandEmbedding {
     private var runtimeReady = false
     private var activeSid = -1
     private var pendingInit: String? = null
+    private var activeView: FlutterView? = null
 
     override fun onAppCreate(app: Application, host: IslandHost) {
         application = app
@@ -73,6 +74,7 @@ private class FlutterIslandEmbedding : IslandEmbedding {
         initJson: String,
     ): View {
         val current = ensureEngine()
+        activeView?.detachFromFlutterEngine()
         activeSid = sid
         pendingInit = initJson
         current.lifecycleChannel.appIsResumed()
@@ -80,6 +82,7 @@ private class FlutterIslandEmbedding : IslandEmbedding {
             setBackgroundColor(Color.WHITE)
             attachToFlutterEngine(current)
         }
+        activeView = view
         if (runtimeReady) channel?.invokeMethod("message", initJson)
         return view
     }
@@ -89,8 +92,9 @@ private class FlutterIslandEmbedding : IslandEmbedding {
     }
 
     override fun release(view: View, sid: Int) {
-        (view as? FlutterView)?.detachFromFlutterEngine()
         if (activeSid == sid) {
+            activeView?.detachFromFlutterEngine()
+            activeView = null
             activeSid = -1
             pendingInit = null
         }

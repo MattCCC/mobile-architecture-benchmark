@@ -40,6 +40,7 @@ using namespace facebook::react;
 
 @implementation MBIslandProbeComponentView {
   MBIslandProbeDrawView *_view;
+  double _height;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
@@ -53,6 +54,7 @@ using namespace facebook::react;
     static const auto defaultProps = std::make_shared<const MobileBenchProbeProps>();
     _props = defaultProps;
     _view = [[MBIslandProbeDrawView alloc] initWithFrame:CGRectZero];
+    _height = -1;
     self.contentView = _view;
   }
   return self;
@@ -65,13 +67,28 @@ using namespace facebook::react;
   NSString *token = [NSString stringWithUTF8String:newProps.token.c_str()];
   _view.kind = kind;
   _view.index = newProps.index;
-  // Kind `list` is not used by the islands and never draws.
+  // Kind `list` reports layout height without drawing a container-sized backing store.
   _view.hidden = [kind isEqualToString:@"list"];
   if (![_view.token isEqualToString:token]) {
     _view.token = token;
     [_view setNeedsDisplay];
   }
   [super updateProps:props oldProps:oldProps];
+  [self reportListHeight];
+}
+
+- (void)updateLayoutMetrics:(LayoutMetrics const &)layoutMetrics oldLayoutMetrics:(LayoutMetrics const &)oldLayoutMetrics
+{
+  [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
+  _height = layoutMetrics.frame.size.height;
+  [self reportListHeight];
+}
+
+- (void)reportListHeight
+{
+  if ([_view.kind isEqualToString:@"list"] && _height > 0) {
+    [MBIslandHostBench() probeDrawn:@"list" index:(NSInteger)floor(_height) token:@""];
+  }
 }
 
 - (void)prepareForRecycle
@@ -79,6 +96,7 @@ using namespace facebook::react;
   [super prepareForRecycle];
   _view.token = @"";
   _view.kind = @"";
+  _height = -1;
 }
 
 @end

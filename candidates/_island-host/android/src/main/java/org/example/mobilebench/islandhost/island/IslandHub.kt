@@ -14,8 +14,11 @@ import org.json.JSONObject
  * Host side of the island protocol (the same JSON messages for every runtime). Main thread only.
  *
  * Host to island (every message carries the island instance id `sid`):
+ * - List snapshots carry `rows` ([group, A, B, C, selection]), `summary` ([count, total, revision]) and `anchor`.
+ *   `row` updates replace one render-cache row and the host-computed summary. List actions are `toggle`,
+ *   `detail` and `anchor`; `rendered` batches the UI render counter.
  * - `init` / `snap`: the island's full state. Detail: `i`, `g`, `v` (three values); Insights: `top` ([item, A]),
- *   `b` (five bucket counts), `src`, `ver`, `open`, `idg`. Both: `k` (detail | insights), `n` (item count),
+ *   `b` (five bucket counts), `src`, `ver`, `open`, `idg`. Common: `k` (list | detail | insights), `n` (item count),
  *   `s` (last applied seq), `tk` (screen-root probe token), `xr` (1: emit `xr.js` per received update).
  *   `init` is passed when the island view is created; `snap` answers the island's `ready`.
  * - `v`: new values of the Detail item (`s`, `v`); `ins`: new Insights (`s`, `top`, `b`).
@@ -40,6 +43,7 @@ object IslandHub : IslandHost {
         val view: View,
         val source: IslandSource?,
         val openNo: Int,
+        val onDetail: ((Int) -> Unit)?,
     )
 
     private val open = LinkedHashMap<Int, Open>()
@@ -47,22 +51,22 @@ object IslandHub : IslandHost {
     val insightsOpen: Boolean get() = open.values.any { it.kind == IslandKind.INSIGHTS }
 
     /** Creates the island view for a Detail(index) or Insights destination. */
-    fun open(activity: ComponentActivity, kind: IslandKind, index: Int): View {
+    fun open(activity: ComponentActivity, kind: IslandKind, index: Int, onDetail: ((Int) -> Unit)? = null): View {
         val s = checkNotNull(store) { "no session" }
         val sid = nextSid++
-        val route = if (kind == IslandKind.DETAIL) "detail/$index" else "insights"
+        val route = if (kind == IslandKind.DETAIL) "detail/$index" else kind.wire
         var source: IslandSource? = null
         var openNo = 0
         if (kind == IslandKind.INSIGHTS) {
             source = embedding.insightsSource()
             BenchKit.insightsSource(source.src)
             openNo = ++insightsOpens
-        } else {
+        } else if (kind == IslandKind.DETAIL) {
             IslandBenchApi.currentDetailRoute = route
         }
         val token = BenchKit.tokenFor(route, s.navSeq)
         val view = embedding.createView(activity, sid, kind, state("init", sid, kind, index, s, token, source, openNo))
-        open[sid] = Open(sid, kind, index, route, view, source, openNo)
+        open[sid] = Open(sid, kind, index, route, view, source, openNo, onDetail)
         return view
     }
 
@@ -82,6 +86,7 @@ object IslandHub : IslandHost {
         var marked = false
         for (o in open.values) {
             val message = when (o.kind) {
+                IslandKind.LIST -> listRow(o.sid, item, s)
                 IslandKind.DETAIL -> if (o.index == item) "{\"t\":\"v\",\"sid\":${o.sid},\"s\":$seq,\"v\":[$v0,$v1,$v2]}" else null
                 IslandKind.INSIGHTS -> StringBuilder(160).apply {
                     append("{\"t\":\"ins\",\"sid\":").append(o.sid).append(",\"s\":").append(seq)
@@ -96,6 +101,23 @@ object IslandHub : IslandHost {
             embedding.send(o.view, o.sid, message)
         }
     }
+
+    fun onSelection(item: Int) {
+        val s = store ?: return
+        for (o in open.values.filter { it.kind == IslandKind.LIST }) {
+            embedding.send(o.view, o.sid, listRow(o.sid, item, s))
+        }
+    }
+
+    private fun listRow(sid: Int, item: Int, s: AppStore): String =
+        "{\"t\":\"row\",\"sid\":$sid,\"s\":${s.model.lastAppliedSeq},\"i\":$item,\"row\":${row(item, s)}" +
+            ",\"summary\":${summary(s)}}"
+
+    private fun row(i: Int, s: AppStore): String = s.model.let {
+        "[${it.groups[i]},${it.value(i, 0)},${it.value(i, 1)},${it.value(i, 2)},${it.selection[i]}]"
+    }
+
+    private fun summary(s: AppStore): String = s.model.let { "[${it.selectedCount},${it.total},${it.selectionRevision}]" }
 
     /** The top route or the foreground sequence changed: the top island draws its new token. */
     fun onTokenChanged() {
@@ -128,6 +150,23 @@ object IslandHub : IslandHost {
             return
         }
         when (m.optString("t")) {
+            "rendered" -> {
+                if (open[sid]?.kind == IslandKind.LIST) {
+                    m.optInt("n", 0).takeIf { it > 0 }?.let { store?.let { s -> s.rowRenders += it } }
+                }
+            }
+            "toggle", "detail", "anchor" -> {
+                val o = open[sid] ?: return
+                val s = store ?: return
+                if (o.kind != IslandKind.LIST || s.topRoute != "list") return
+                val i = m.optInt("i", -1)
+                if (i !in 0 until s.itemCount) return
+                when (m.optString("t")) {
+                    "toggle" -> m.optInt("o", -1).takeIf { it in 0..2 }?.let { s.toggle(i, it) }
+                    "detail" -> o.onDetail?.invoke(i)
+                    "anchor" -> s.anchor = i
+                }
+            }
             "ready" -> {
                 val o = open[sid] ?: return
                 val s = store ?: return
@@ -157,6 +196,14 @@ object IslandHub : IslandHost {
         sb.append(",\"s\":").append(m.lastAppliedSeq).append(",\"tk\":\"").append(token).append('"')
         sb.append(",\"xr\":").append(if (BenchKit.config.xr) 1 else 0)
         when (kind) {
+            IslandKind.LIST -> {
+                sb.append(",\"rows\":[")
+                for (i in 0 until m.itemCount) {
+                    if (i > 0) sb.append(',')
+                    sb.append(row(i, s))
+                }
+                sb.append("],\"summary\":").append(summary(s)).append(",\"anchor\":").append(s.anchor)
+            }
             IslandKind.DETAIL -> {
                 sb.append(",\"i\":").append(index).append(",\"g\":").append(m.groups[index])
                 sb.append(",\"v\":[").append(m.value(index, 0)).append(',').append(m.value(index, 1)).append(',')

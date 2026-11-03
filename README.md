@@ -32,10 +32,11 @@ The entire app, every screen, is written in one framework.
 
 A brownfield architecture: the app is native, and a cross-platform runtime renders only some screens. All three
 island candidates share one byte-identical native host (`candidates/_island-host`: Jetpack Compose on Android,
-UIKit on iOS) that owns the List and Selection screens, navigation, data, the stream, persistence and restoration.
-Only the Detail and Insights screens are islands: one embedded runtime renders both, from versioned JSON state
-messages the host sends. Islands never hold their own copy of the data. The runtime starts at the first island open
-(`mb.engine=lazy`, default) or during launch (`mb.engine=prewarm`).
+UIKit on iOS) that owns Selection, navigation, authoritative data, the stream, persistence and restoration.
+List (including its summary), Detail and Insights are islands rendered by one embedded runtime. Islands hold render
+caches of host snapshots and row updates; selection actions go back to the host. With List on the launch path, the
+default `mb.engine=lazy` initializes the runtime when List opens during startup. `mb.engine=prewarm` starts it earlier
+in launch. Fully drawn waits for the island summary and every fully visible initial row to paint.
 
 | Id | Island runtime | Host ↔ island bridge | Android build | iOS simulator build |
 | --- | --- | --- | --- | --- |
@@ -130,6 +131,9 @@ committed in `results/early-2026-10-27/` (the first, emulator/simulator only, in
 
 ## Results (early sessions, 2026-10-26/27)
 
+**Historical architecture:** the island artifacts in these tables used a native List and deferred Detail/Insights
+runtimes. Current island candidates render List in their runtime too; these measurements describe the old artifacts.
+
 Descriptive only, not a ranking: two Galaxy A16 phone sessions, two Android emulator sessions and up to four iOS
 simulator sessions on one Apple silicon host, with no independent review and the instrumentation-overhead check
 waived. Values are pooled medians (10–20 process-cold runs per startup/memory cell, 5 scroll runs of 8 seeded flings,
@@ -202,7 +206,8 @@ Notes:
   same as native, so the cost sits in the React Native List under scrolling, most likely the default FlatList
   virtualization (`windowSize` 21, no cell recycling) in `candidates/_rn-shared/ui/src/screens/ListScreen.tsx`.
   These are untuned defaults, like every other candidate's standard list; not profiled per thread yet.
-- Island candidates measure the native shell at startup (islands load lazily on first open).
+- These archived island artifacts measured the native List at startup; Detail/Insights loaded on first open.
+  Their startup, List scrolling, idle memory and scroll energy figures do not measure an active island List.
 - `@debug` iOS simulator builds (Flutter has no release simulator build) are never comparable with release builds,
   and are unstable: `flutter@debug` cold start was 2.29 s in one session and 0.78 s in the next on the same build,
   the whole difference before the first Dart code runs (debug engine start-up). Treat them as unreliable.

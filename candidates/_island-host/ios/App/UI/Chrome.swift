@@ -164,23 +164,33 @@ class ScreenViewController: UIViewController, StoreObserver {
 
 /// An island screen: the host chrome (navigation bar with back control, status chip row with the checkpoint digest
 /// element) and, in the content area, the view of the island runtime, which also draws the screen-root probe.
-final class IslandViewController: ScreenViewController {
+class IslandViewController: ScreenViewController {
     let kind: IslandKind
     let index: Int
     private var sid = 0
+    private weak var islandView: UIView?
 
     init(store: AppStore, kind: IslandKind, index: Int) {
         self.kind = kind
         self.index = index
-        super.init(store: store, route: kind == .detail ? "detail/\(index)" : "insights", nativeProbe: false)
+        super.init(store: store, route: kind == .detail ? "detail/\(index)" : kind.rawValue, nativeProbe: false)
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = kind == .detail ? store.label(index) : "Insights"
-        view.accessibilityIdentifier = kind == .detail ? "mb.screen.detail" : "mb.screen.insights"
-        let (sid, island) = IslandHub.shared.makeView(kind: kind, index: index, route: route)
+        title = kind == .detail ? store.label(index) : kind == .list ? "Items" : "Insights"
+        view.accessibilityIdentifier = "mb.screen.\(kind.rawValue)"
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        guard sid == 0 else { return }
+        let (sid, island) = IslandHub.shared.makeView(kind: kind, index: index, route: route, onDetail: { [weak self] i in
+            guard let self, self.navigationController?.topViewController === self else { return }
+            self.navigationController?.pushViewController(IslandViewController(store: self.store, kind: .detail, index: i), animated: true)
+        })
         self.sid = sid
+        islandView = island
         island.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(island)
         NSLayoutConstraint.activate([
@@ -191,11 +201,15 @@ final class IslandViewController: ScreenViewController {
         ])
     }
 
-    /// Popped (not just covered): the island instance is released.
+    /// One visible island at a time, including runtimes with one shared rendering surface. Reopening uses a fresh
+    /// host snapshot and the retained native scroll anchor; the engine stays alive.
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        if isMovingFromParent || navigationController == nil {
+        if sid != 0 {
             IslandHub.shared.release(sid: sid)
+            if islandView?.superview === content { islandView?.removeFromSuperview() }
+            islandView = nil
+            sid = 0
         }
     }
 }

@@ -1,12 +1,14 @@
 # React Native islands candidate
 
-This candidate keeps the application shell native and embeds React Native only for Detail and Insights. Android uses
-Jetpack Compose and packages the RN islands as a Brownfield AAR. iOS uses UIKit and links the same RN/Brownfield island
-runtime through CocoaPods. One Hermes runtime serves both island screens; `mb.engine=lazy` (the default) starts it on
-the first island open, while `mb.engine=prewarm` starts it during launch.
+The shared native host owns Selection, navigation, authoritative state, persistence, restoration and replay.
+One React Native/Hermes runtime renders **List (including its summary), Detail and Insights**. List opens at startup,
+so the default `mb.engine=lazy` includes runtime initialization in time to fully drawn. `prewarm` starts that same
+runtime earlier during launch. The native header/status row may appear before the island, so first frame and fully
+drawn remain distinct measurements.
 
-The native shell owns the fixture, live state, selection, list, navigation, persistence, restoration and replay
-stream. Islands receive versioned JSON snapshots and updates and never become a second source of truth.
+The island holds a render cache of host snapshots and per-row updates. Taps send intents to the host; the host
+updates selection and returns the row and summary. Fully drawn requires the island's actual list layout, visible
+row paints and summary paint. Navigation and restoration continue to use the native host.
 
 ## Build and check
 
@@ -48,3 +50,7 @@ same replay/method/environment cell without pooling it with server-stream or dif
 - Independently delivered remote island code and the bridge micro-benchmark are not implemented.
 - Instrumentation is an interim candidate-local host core plus RN forwarder, so sessions are descriptive.
 - A passing shared acceptance receipt is still required; registration never bypasses behavioral equivalence.
+
+The Android AAR uses Gradle 9.4.1 with RN's Kotlin 2.2.0 plugin (AGP 9.2.1). The native host uses the native
+candidate's Gradle 9.8.2 wrapper, AGP 9.4.1 and Kotlin 2.4.21. These are separate builds: Gradle 9.8's embedded
+Kotlin metadata cannot be read by RN's Kotlin 2.2 compiler. Both toolchains are recorded in `candidate.json`.

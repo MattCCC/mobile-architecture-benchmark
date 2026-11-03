@@ -19,6 +19,7 @@ final class IslandHub: IslandHost {
         weak var view: UIView?
         let source: IslandSource?
         let openNo: Int
+        let onDetail: ((Int) -> Void)?
     }
 
     private var open: [Int: Open] = [:]
@@ -28,7 +29,7 @@ final class IslandHub: IslandHost {
     var insightsOpen: Bool { open.values.contains { $0.kind == .insights } }
 
     /// Creates the island view for a Detail(index) or Insights screen.
-    func makeView(kind: IslandKind, index: Int, route: String) -> (sid: Int, view: UIView) {
+    func makeView(kind: IslandKind, index: Int, route: String, onDetail: ((Int) -> Void)? = nil) -> (sid: Int, view: UIView) {
         let sid = nextSid
         nextSid += 1
         var source: IslandSource?
@@ -39,13 +40,13 @@ final class IslandHub: IslandHost {
             BenchKit.insightsSource(s.src)
             insightsOpens += 1
             openNo = insightsOpens
-        } else {
+        } else if kind == .detail {
             BenchKit.currentDetailRoute = route
         }
         let json = state("init", sid: sid, kind: kind, index: index, token: BenchKit.token(for: route), source: source,
                          openNo: openNo)
         let view = embedding.makeView(sid: sid, kind: kind, initJSON: json)
-        open[sid] = Open(sid: sid, kind: kind, index: index, route: route, view: view, source: source, openNo: openNo)
+        open[sid] = Open(sid: sid, kind: kind, index: index, route: route, view: view, source: source, openNo: openNo, onDetail: onDetail)
         return (sid, view)
     }
 
@@ -63,6 +64,8 @@ final class IslandHub: IslandHost {
             guard let view = o.view else { continue }
             let message: String
             switch o.kind {
+            case .list:
+                message = listRow(sid: o.sid, item: item)
             case .detail:
                 guard o.index == item else { continue }
                 message = "{\"t\":\"v\",\"sid\":\(o.sid),\"s\":\(seq),\"v\":[\(v0),\(v1),\(v2)]}"
@@ -75,6 +78,27 @@ final class IslandHub: IslandHost {
             }
             embedding.send(view: view, sid: o.sid, message: message)
         }
+    }
+
+    func onSelection(item: Int) {
+        for o in open.values where o.kind == .list {
+            guard let view = o.view else { continue }
+            embedding.send(view: view, sid: o.sid, message: listRow(sid: o.sid, item: item))
+        }
+    }
+
+    private func row(_ i: Int) -> String {
+        guard let m = store?.model else { return "[]" }
+        return "[\(m.groups[i]),\(m.value(i, 0)),\(m.value(i, 1)),\(m.value(i, 2)),\(m.selection[i])]"
+    }
+
+    private func summary() -> String {
+        guard let m = store?.model else { return "[]" }
+        return "[\(m.selectedCount),\(m.total),\(m.selectionRevision)]"
+    }
+
+    private func listRow(sid: Int, item: Int) -> String {
+        "{\"t\":\"row\",\"sid\":\(sid),\"s\":\(store?.model.lastAppliedSeq ?? 0),\"i\":\(item),\"row\":\(row(item)),\"summary\":\(summary())}"
     }
 
     /// The top route or the foreground sequence changed: the top island draws its new token.
@@ -103,6 +127,15 @@ final class IslandHub: IslandHost {
             return
         }
         switch t {
+        case "rendered":
+            if open[sid]?.kind == .list, let n = m["n"] as? Int, n > 0 { store?.rowRenders += n }
+        case "toggle", "detail", "anchor":
+            guard let o = open[sid], o.kind == .list, BenchKit.topRoute == "list", let store,
+                  let i = m["i"] as? Int, (0..<store.model.itemCount).contains(i) else { return }
+            if t == "toggle", let option = m["o"] as? Int, (0..<3).contains(option) {
+                store.toggle(item: i, option: option)
+            } else if t == "detail" { o.onDetail?(i) }
+            else if t == "anchor" { store.anchor = i }
         case "ready":
             guard let o = open[sid], let view = o.view else { return }
             embedding.send(view: view, sid: sid,
@@ -126,6 +159,9 @@ final class IslandHub: IslandHost {
         var s = "{\"t\":\"\(type)\",\"sid\":\(sid),\"k\":\"\(kind.rawValue)\",\"n\":\(m.itemCount),"
         s += "\"s\":\(m.lastAppliedSeq),\"tk\":\"\(token)\",\"xr\":\(BenchKit.config.xr ? 1 : 0)"
         switch kind {
+        case .list:
+            s += ",\"rows\":[" + (0..<m.itemCount).map { row($0) }.joined(separator: ",") + "]"
+            s += ",\"summary\":\(summary()),\"anchor\":\(store.anchor)"
         case .detail:
             s += ",\"i\":\(index),\"g\":\(m.groups[index]),\"v\":[\(m.value(index, 0)),\(m.value(index, 1)),"
             s += "\(m.value(index, 2))]"

@@ -4,8 +4,9 @@ import android.app.Application
 import android.view.View
 import androidx.activity.ComponentActivity
 
-/** The two island screens (decision 38): the item Detail screen and the Insights feature. */
+/** List is on the launch path; Detail and Insights share its runtime. */
 enum class IslandKind(val wire: String, val module: String) {
+    LIST("list", "MBListIsland"),
     DETAIL("detail", "MBDetailIsland"),
     INSIGHTS("insights", "MBInsightsIsland"),
 }

@@ -28,7 +28,7 @@ final class AppStore {
     var insightsDigestText = "-"
     /// Index of the first visible List row (restoration anchor).
     var anchor: Int
-    /// Cell configurations of the native List (implementation-quality counter, `ctr rows=`).
+    /// Row renders reported by the List island (implementation-quality counter, `ctr rows=`).
     var rowRenders = 0
     private let observers = NSHashTable<AnyObject>.weakObjects()
 
@@ -67,6 +67,7 @@ final class AppStore {
         each { $0.storeSelectionChanged(item) }
         each { $0.storeSummaryChanged() }
         BenchKit.selectionChanged()
+        IslandHub.shared.onSelection(item: item)
     }
 
     func setStatus(_ s: StreamStatus) {

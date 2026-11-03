@@ -8,10 +8,10 @@
   "architectureClass": "native-shell-cross-platform-ui-islands",
   "owner": "island-flutter",
   "status": { "android": "implemented", "ios": "implemented-debug-simulator" },
-  "statusNote": "The native shell owns List, Selection, navigation, state, persistence and stream processing. One Flutter engine renders Detail and Insights. Flutter supports Android release add-to-app; its iOS simulator artifact is debug-only and is reported as island-flutter@debug.",
+  "statusNote": "The native shell owns Selection, navigation, authoritative state, persistence and stream processing. One shared Flutter/Dart runtime renders List (including its summary), Detail and Insights. List is an island on the cold launch path.",
   "host": {
     "path": "candidates/_island-host",
-    "sha256": "48200e07f554937285d80eaa2670952bdb42dc14973132f3fdab7a2b57e7272d"
+    "sha256": "5f8baf0ab502005a1ea0d8b25fe8ca4d6c51fefe5eac7c2853dd36f62bd9cbf2"
   },
   "sharedBuildInputs": [
     "candidates/_island-host"
@@ -21,14 +21,14 @@
       "applicationId": "org.example.mobilebench.islandflutter",
       "launchActivity": "org.example.mobilebench.islandflutter/org.example.mobilebench.islandhost.MainActivity",
       "contentSurface": "native-activity-with-flutter-islands",
-      "uiToolkit": "Jetpack Compose shell; Flutter Detail and Insights islands",
-      "runtime": "ART native shell plus one lazy or prewarmed Flutter engine and Dart isolate",
-      "listPrimitive": "native LazyColumn",
+      "uiToolkit": "Jetpack Compose shell; Flutter List, Detail and Insights islands",
+      "runtime": "ART native shell plus one launch-path Flutter engine and Dart isolate",
+      "listPrimitive": "Flutter ListView.builder",
       "navigation": "native Navigation Compose NavHost",
       "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
       "streamSource": "replay",
       "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
-      "instrumentationId": "island-host-flutter-channel-interim/1",
+      "instrumentationId": "island-host-flutter-channel-interim/2",
       "buildClass": "release",
       "artifacts": { "apk": "android/app/build/outputs/apk/release/app-release.apk" },
       "sizeClassification": [
@@ -41,14 +41,14 @@
     "ios": {
       "bundleId": "org.example.mobilebench.islandflutter",
       "contentSurface": "native-uikit-shell-with-flutter-islands",
-      "uiToolkit": "UIKit shell; Flutter Detail and Insights islands",
-      "runtime": "Swift native shell plus one lazy or prewarmed Flutter engine and Dart isolate",
-      "listPrimitive": "native UITableView",
+      "uiToolkit": "UIKit shell; Flutter List, Detail and Insights islands",
+      "runtime": "Swift native shell plus one launch-path Flutter engine and Dart isolate",
+      "listPrimitive": "Flutter ListView.builder",
       "navigation": "native UINavigationController",
       "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
       "streamSource": "replay",
       "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "debug" },
-      "instrumentationId": "island-host-flutter-channel-interim/1",
+      "instrumentationId": "island-host-flutter-channel-interim/2",
       "buildClass": { "simulator": "debug", "device": "release" },
       "artifacts": { "simulatorApp": "build/ios/Build/Products/Debug-iphonesimulator/MBIslandFlutter.app" },
       "sizeClassification": [
@@ -84,7 +84,7 @@
   },
   "crossRuntime": {
     "applicable": true,
-    "boundary": "native host owns data and navigation; Flutter renders Detail and Insights from versioned JSON messages"
+    "boundary": "native host owns data and navigation; Flutter/Dart renders List, Detail and Insights from host JSON snapshots and row updates"
   },
   "deviations": [
     {

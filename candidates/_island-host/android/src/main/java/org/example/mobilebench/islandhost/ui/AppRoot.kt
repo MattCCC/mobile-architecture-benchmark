@@ -31,8 +31,8 @@ object Routes {
 }
 
 /**
- * Navigation Compose host with the framework's default transitions (design §8.1, §8.7). List and Selection are
- * native screens; Detail and Insights are islands (decision 38).
+ * Navigation Compose host with the framework's default transitions (design §8.1, §8.7). Selection is native;
+ * List, Detail and Insights are islands.
  *
  * Restoration (design §8.8): for a restored launch the back stack (e.g. list -> detail/21) is built before the
  * first composition of the NavHost, so the restored screen is the first one drawn and List is not drawn first.

@@ -63,7 +63,7 @@ class AppStore(val model: StateModel, val initialRoutes: List<String>, val initi
     /** The restored route stack, returned once to the first navigation host of the session. */
     fun consumeRestoredStack(): List<String>? = restoredStack.also { restoredStack = null }
 
-    /** Row compositions of the native List (implementation-quality counter, `ctr rows=`). */
+    /** Row renders reported by the List island (implementation-quality counter, `ctr rows=`). */
     var rowRenders: Long = 0
 
     fun label(index: Int): String = Format.itemLabel(index, labelWidth)
@@ -95,5 +95,6 @@ class AppStore(val model: StateModel, val initialRoutes: List<String>, val initi
             selectedItems.removeAt(pos)
         }
         selectionRevision = model.selectionRevision
+        IslandHub.onSelection(item)
     }
 }

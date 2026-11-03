@@ -1,9 +1,14 @@
 # Flutter islands candidate
 
-This candidate keeps List, Selection, navigation, state, persistence, restoration and replay in the byte-identical
-native island host. A single Flutter add-to-app engine renders only Detail and Insights and exchanges versioned JSON
-messages with the host over one `MethodChannel`. `mb.engine=lazy` starts it at the first island; `prewarm` starts it
-during launch.
+The shared native host owns Selection, navigation, authoritative state, persistence, restoration and replay.
+One Flutter/Dart runtime renders **List (including its summary), Detail and Insights**. List opens at startup,
+so the default `mb.engine=lazy` includes runtime initialization in time to fully drawn. `prewarm` starts that same
+runtime earlier during launch. The native header/status row may appear before the island, so first frame and fully
+drawn remain distinct measurements.
+
+The island holds a render cache of host snapshots and per-row updates. Taps send intents to the host; the host
+updates selection and returns the row and summary. Fully drawn requires the island's actual list layout, visible
+row paints and summary paint. Navigation and restoration continue to use the native host.
 
 ```sh
 make check-island-flutter MB_ISLAND_FLUTTER_BIN=/path/to/flutter-3.47.7/bin/flutter

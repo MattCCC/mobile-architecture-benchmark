@@ -1,9 +1,14 @@
 # NativeScript islands candidate
 
-This candidate keeps List, Selection, navigation, state, persistence, restoration and replay in the shared native
-island host (`candidates/_island-host`). One NativeScript V8 runtime renders only Detail and Insights, built from
-`@nativescript/core` views. `mb.engine=lazy` (default) starts the runtime at the first island open; `prewarm`
-starts it during launch.
+The shared native host owns Selection, navigation, authoritative state, persistence, restoration and replay.
+One NativeScript/V8 runtime renders **List (including its summary), Detail and Insights**. List opens at startup,
+so the default `mb.engine=lazy` includes runtime initialization in time to fully drawn. `prewarm` starts that same
+runtime earlier during launch. The native header/status row may appear before the island, so first frame and fully
+drawn remain distinct measurements.
+
+The island holds a render cache of host snapshots and per-row updates. Taps send intents to the host; the host
+updates selection and returns the row and summary. Fully drawn requires the island's actual list layout, visible
+row paints and summary paint. Navigation and restoration continue to use the native host.
 
 The island protocol parser and view model are the shared pure-TypeScript modules of `candidates/_island-rn-ui`, so
 every island runtime handles host messages identically. Unlike the RN and Flutter islands, the bridge is

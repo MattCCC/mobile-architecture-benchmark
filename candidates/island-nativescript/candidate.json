@@ -8,10 +8,10 @@
   "architectureClass": "native-shell-cross-platform-ui-islands",
   "owner": "island-nativescript",
   "status": { "android": "implemented", "ios": "implemented" },
-  "statusNote": "The native shell owns List, Selection, navigation, state, persistence and stream processing. One NativeScript V8 runtime renders Detail and Insights with @nativescript/core views and talks to the host synchronously (Kotlin calls on Android, NSNotificationCenter posts on iOS).",
+  "statusNote": "The native shell owns Selection, navigation, authoritative state, persistence and stream processing. One shared NativeScript/V8 runtime renders List (including its summary), Detail and Insights. List is an island on the cold launch path.",
   "host": {
     "path": "candidates/_island-host",
-    "sha256": "48200e07f554937285d80eaa2670952bdb42dc14973132f3fdab7a2b57e7272d"
+    "sha256": "5f8baf0ab502005a1ea0d8b25fe8ca4d6c51fefe5eac7c2853dd36f62bd9cbf2"
   },
   "sharedBuildInputs": [
     "candidates/_island-host",
@@ -24,14 +24,14 @@
       "applicationId": "org.example.mobilebench.islandnativescript",
       "launchActivity": "org.example.mobilebench.islandnativescript/org.example.mobilebench.islandhost.MainActivity",
       "contentSurface": "native-activity-with-nativescript-islands",
-      "uiToolkit": "Jetpack Compose shell; NativeScript core Detail and Insights islands",
-      "runtime": "ART native shell plus one lazy or prewarmed NativeScript V8 runtime",
-      "listPrimitive": "native LazyColumn",
+      "uiToolkit": "Jetpack Compose shell; NativeScript core List, Detail and Insights islands",
+      "runtime": "ART native shell plus one launch-path NativeScript V8 runtime",
+      "listPrimitive": "NativeScript core ListView",
       "navigation": "native Navigation Compose NavHost",
       "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
       "streamSource": "replay",
       "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
-      "instrumentationId": "island-host-nativescript-direct-interim/1",
+      "instrumentationId": "island-host-nativescript-direct-interim/2",
       "buildClass": "release",
       "artifacts": { "apk": "build/android/app-arm64-release.apk" },
       "sizeClassification": [
@@ -45,14 +45,14 @@
     "ios": {
       "bundleId": "org.example.mobilebench.islandnativescript",
       "contentSurface": "native-uikit-shell-with-nativescript-islands",
-      "uiToolkit": "UIKit shell; NativeScript core Detail and Insights islands",
-      "runtime": "Swift native shell plus one lazy or prewarmed NativeScript V8 runtime",
-      "listPrimitive": "native UITableView",
+      "uiToolkit": "UIKit shell; NativeScript core List, Detail and Insights islands",
+      "runtime": "Swift native shell plus one launch-path NativeScript V8 runtime",
+      "listPrimitive": "NativeScript core ListView",
       "navigation": "native UINavigationController",
       "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
       "streamSource": "replay",
       "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "release" },
-      "instrumentationId": "island-host-nativescript-direct-interim/1",
+      "instrumentationId": "island-host-nativescript-direct-interim/2",
       "buildClass": "release",
       "artifacts": { "simulatorApp": "build/ios/MBIslandNativeScript.app" },
       "sizeClassification": [
@@ -91,7 +91,7 @@
   },
   "crossRuntime": {
     "applicable": true,
-    "boundary": "native host owns data and navigation; NativeScript renders Detail and Insights from versioned JSON messages"
+    "boundary": "native host owns data and navigation; NativeScript/V8 renders List, Detail and Insights from host JSON snapshots and row updates"
   },
   "deviations": [
     {

@@ -415,8 +415,12 @@ object IslandBenchApi {
     /** Kinds: `screen` (index = route index, token `nav:` / `fg:` / `restore:`), `insights` (token `ready:`). */
     fun probeDrawn(kind: String, index: Int, token: String) {
         when (kind) {
+            "list" -> BenchKit.listLayout(index)
+            "row" -> BenchKit.rowDrawn(index)
+            "summary" -> token.substringAfter(':').toIntOrNull()?.let { BenchKit.summaryDrawn(index, it) }
             // Route index numbering of the shared RN UI: 2 = detail, 3 = insights (the two island screens).
             "screen" -> when (index) {
+                0 -> BenchKit.tokenDrawn("list", token)
                 2 -> currentDetailRoute?.let { BenchKit.tokenDrawn(it, token) }
                 3 -> BenchKit.tokenDrawn("insights", token)
                 else -> Unit

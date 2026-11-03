@@ -8,29 +8,31 @@
   "architectureClass": "native-shell-cross-platform-ui-islands",
   "owner": "island-rn",
   "status": { "android": "implemented", "ios": "implemented" },
-  "statusNote": "The native shell owns List, Selection, navigation, state, persistence and stream processing. One shared React Native/Hermes runtime renders Detail and Insights. The default transport is the same bundled replay comparison cell as the other current candidates.",
+  "statusNote": "The native shell owns Selection, navigation, authoritative state, persistence and stream processing. One shared React Native/Hermes runtime renders List (including its summary), Detail and Insights. List is an island on the cold launch path.",
   "host": {
     "path": "candidates/_island-host",
-    "sha256": "48200e07f554937285d80eaa2670952bdb42dc14973132f3fdab7a2b57e7272d"
+    "sha256": "5f8baf0ab502005a1ea0d8b25fe8ca4d6c51fefe5eac7c2853dd36f62bd9cbf2"
   },
   "sharedBuildInputs": [
     "candidates/_island-host",
     "candidates/_island-rn-ui",
-    "candidates/_rn-shared"
+    "candidates/_rn-shared",
+    "candidates/native/android/gradle/wrapper",
+    "candidates/native/android/gradlew"
   ],
   "platforms": {
     "android": {
       "applicationId": "org.example.mobilebench.islandrn",
       "launchActivity": "org.example.mobilebench.islandrn/org.example.mobilebench.islandhost.MainActivity",
       "contentSurface": "native-activity-with-react-native-islands",
-      "uiToolkit": "Jetpack Compose shell; React Native Fabric Detail and Insights islands",
-      "runtime": "ART native shell plus one lazy or prewarmed Hermes runtime",
-      "listPrimitive": "native LazyColumn",
+      "uiToolkit": "Jetpack Compose shell; React Native Fabric List, Detail and Insights islands",
+      "runtime": "ART native shell plus one launch-path Hermes runtime",
+      "listPrimitive": "React Native FlatList",
       "navigation": "native Navigation Compose NavHost",
       "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
       "streamSource": "replay",
       "benchmarkBuild": { "minSdk": 24, "targetSdk": 36, "abi": "arm64-v8a", "buildClass": "release" },
-      "instrumentationId": "island-host-rn-forwarder-interim/1",
+      "instrumentationId": "island-host-rn-forwarder-interim/2",
       "buildClass": "release",
       "artifacts": { "apk": "android/app/build/outputs/apk/release/app-release.apk" },
       "sizeClassification": [
@@ -44,14 +46,14 @@
     "ios": {
       "bundleId": "org.example.mobilebench.islandrn",
       "contentSurface": "native-uikit-shell-with-react-native-islands",
-      "uiToolkit": "UIKit shell; React Native Fabric Detail and Insights islands",
-      "runtime": "Swift native shell plus one lazy or prewarmed Hermes runtime",
-      "listPrimitive": "native UITableView",
+      "uiToolkit": "UIKit shell; React Native Fabric List, Detail and Insights islands",
+      "runtime": "Swift native shell plus one launch-path Hermes runtime",
+      "listPrimitive": "React Native FlatList",
       "navigation": "native UINavigationController",
       "streamClient": "native in-app replay of the bundled, golden-verified stream; WebSocket not implemented",
       "streamSource": "replay",
       "benchmarkBuild": { "deploymentTarget": "16.4", "arch": "arm64", "buildClass": "release" },
-      "instrumentationId": "island-host-rn-forwarder-interim/1",
+      "instrumentationId": "island-host-rn-forwarder-interim/2",
       "buildClass": { "simulator": "release", "device": "release" },
       "artifacts": { "simulatorApp": "build/ios/Build/Products/Release-iphonesimulator/MBIslandRn.app" },
       "sizeClassification": [
@@ -67,9 +69,9 @@
     "react": "19.3.0",
     "brownfield": "6.0.1",
     "hermes": "260318099.0.4",
-    "gradle": "9.8.2",
+    "gradle": "9.8.2 (host); 9.4.1 (RN AAR packaging)",
     "androidGradlePlugin": "9.4.1",
-    "kotlin": "2.2.0",
+    "kotlin": "2.4.21 (host); 2.2.0 (RN AAR packaging)",
     "xcode": "27.1 (27A9275)",
     "swiftLanguageMode": "6 (host/core); 5 (ReactBrownfield compatibility)"
   },
@@ -89,7 +91,7 @@
   },
   "crossRuntime": {
     "applicable": true,
-    "boundary": "native host owns data and navigation; React Native renders Detail and Insights from versioned JSON messages"
+    "boundary": "native host owns data and navigation; React Native/Hermes renders List, Detail and Insights from host JSON snapshots and row updates"
   },
   "deviations": [
     {

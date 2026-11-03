@@ -10,6 +10,7 @@ import { IslandRegistry } from './model';
 import type { IslandModel } from './model';
 import type { IslandKindName, IslandMessage } from './protocol';
 import { DetailIsland } from './DetailIsland';
+import { ListIsland } from './ListIsland';
 import { InsightsIsland } from './InsightsIsland';
 
 /** The host channel of one runtime (Brownfield messaging in `island-rn`). */
@@ -68,7 +69,7 @@ function makeRoot(
     }
     return (
       <IslandBoundary>
-        {kind === 'detail' ? <DetailIsland model={model} buildProbe={buildProbe} /> : <InsightsIsland model={model} />}
+        {kind === 'list' ? <ListIsland model={model} channel={channel} /> : kind === 'detail' ? <DetailIsland model={model} buildProbe={buildProbe} /> : <InsightsIsland model={model} />}
       </IslandBoundary>
     );
   };
@@ -79,8 +80,10 @@ export function registerIslands(channel: IslandChannel, buildProbe: string): Isl
   const registry = new IslandRegistry(bench);
   channel.subscribe((message) => registry.dispatch(message));
   const detail = makeRoot('detail', registry, channel, buildProbe);
+  const list = makeRoot('list', registry, channel, buildProbe);
   const insights = makeRoot('insights', registry, channel, buildProbe);
   AppRegistry.registerComponent('MBDetailIsland', () => detail);
+  AppRegistry.registerComponent('MBListIsland', () => list);
   AppRegistry.registerComponent('MBInsightsIsland', () => insights);
   return registry;
 }

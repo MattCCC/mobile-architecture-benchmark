@@ -2,7 +2,7 @@
 // every island runtime; every message carries the island instance id `sid`. Pure TypeScript (no React Native
 // imports), so it runs under `node --test`.
 
-export type IslandKindName = 'detail' | 'insights';
+export type IslandKindName = 'list' | 'detail' | 'insights';
 export type InsightsSourceKind = 'embedded' | 'cache' | 'network' | 'embedded-fallback';
 
 interface StateBase {
@@ -36,17 +36,31 @@ export interface InsightsState extends StateBase {
   idg: string;
 }
 
-export type IslandState = DetailState | InsightsState;
+/** Render cache only: [group, valueA, valueB, valueC, selectedOption]. The host owns all mutations. */
+export interface ListState extends StateBase {
+  k: 'list';
+  rows: number[][];
+  /** [selected count, total, selection revision] */
+  summary: number[];
+  anchor: number;
+}
+
+export type IslandState = ListState | DetailState | InsightsState;
 
 export type HostMessage =
   | ({ t: 'init' | 'snap' } & IslandState)
   | { t: 'v'; sid: number; s: number; v: number[] }
+  | { t: 'row'; sid: number; s: number; i: number; row: number[]; summary: number[] }
   | { t: 'ins'; sid: number; s: number; top: number[][]; b: number[] }
   | { t: 'tk'; sid: number; k: string }
   | { t: 'idg'; sid: number; x: string };
 
 export type IslandMessage =
   | { t: 'ready'; sid: number }
+  | { t: 'toggle'; sid: number; i: number; o: number }
+  | { t: 'detail'; sid: number; i: number }
+  | { t: 'anchor'; sid: number; i: number }
+  | { t: 'rendered'; sid: number; n: number }
   | { t: 'mark'; sid: number; e: string; p: string }
   | { t: 'probe'; sid: number; kind: string; i: number; tk: string };
 
@@ -70,6 +84,10 @@ function isState(m: Record<string, unknown>): boolean {
   }
   if (m.k === 'detail') {
     return isInt(m.i) && m.i >= 0 && m.i < (m.n as number) && isInt(m.g) && isIntArray(m.v, 3);
+  }
+  if (m.k === 'list') {
+    return Array.isArray(m.rows) && m.rows.length === m.n && m.rows.every((r) => isIntArray(r, 5)) &&
+      isIntArray(m.summary, 3) && isInt(m.anchor) && m.anchor >= 0 && m.anchor < m.n;
   }
   if (m.k === 'insights') {
     return (
@@ -108,6 +126,9 @@ export function parseHostMessage(input: unknown): HostMessage | null {
       return isState(m) ? (m as unknown as HostMessage) : null;
     case 'v':
       return isInt(m.s) && isIntArray(m.v, 3) ? (m as unknown as HostMessage) : null;
+    case 'row':
+      return isInt(m.s) && isInt(m.i) && m.i >= 0 && isIntArray(m.row, 5) && isIntArray(m.summary, 3)
+        ? (m as unknown as HostMessage) : null;
     case 'ins':
       return isInt(m.s) && isPairs(m.top) && isIntArray(m.b, 5) ? (m as unknown as HostMessage) : null;
     case 'tk':

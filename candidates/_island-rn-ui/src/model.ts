@@ -27,6 +27,9 @@ export class IslandModel {
   readonly source: InsightsSourceKind;
   readonly version: string;
   readonly openSeq: number;
+  readonly rows: Observable<readonly number[]>[];
+  readonly summary: Observable<readonly number[]>;
+  readonly anchor: number;
   private seq: number;
   private xr: boolean;
   private insights: InsightsSnapshot;
@@ -41,6 +44,9 @@ export class IslandModel {
     this.xr = state.xr === 1;
     this.marks = marks;
     this.token = new Observable<string>(state.tk);
+    this.rows = state.k === 'list' ? state.rows.map((r) => new Observable<readonly number[]>(r.slice())) : [];
+    this.summary = new Observable<readonly number[]>(state.k === 'list' ? state.summary.slice() : [0, 0, 0]);
+    this.anchor = state.k === 'list' ? state.anchor : 0;
     if (state.k === 'detail') {
       this.index = state.i;
       this.group = state.g;
@@ -50,7 +56,7 @@ export class IslandModel {
       this.source = 'embedded';
       this.version = '1';
       this.openSeq = 0;
-    } else {
+    } else if (state.k === 'insights') {
       this.index = -1;
       this.group = -1;
       this.values = new Observable<readonly number[]>([]);
@@ -59,6 +65,15 @@ export class IslandModel {
       this.source = state.src;
       this.version = state.ver;
       this.openSeq = state.open;
+    } else {
+      this.index = -1;
+      this.group = -1;
+      this.values = new Observable<readonly number[]>([]);
+      this.insights = { seq: state.s, top: [], buckets: [0, 0, 0, 0, 0] };
+      this.insightsDigest = new Observable<string>('-');
+      this.source = 'embedded';
+      this.version = '1';
+      this.openSeq = 0;
     }
   }
 
@@ -89,7 +104,7 @@ export class IslandModel {
     switch (m.t) {
       case 'init':
       case 'snap':
-        if (m.k !== this.kind || m.s < this.seq) {
+        if (m.k !== this.kind || m.s < this.seq || (m.k === 'list' && (m.n !== this.itemCount || m.summary[2] < this.summary.get()[2]))) {
           return;
         }
         this.seq = m.s;
@@ -97,10 +112,20 @@ export class IslandModel {
         this.token.set(m.tk);
         if (m.k === 'detail') {
           this.values.set(m.v.slice());
-        } else {
+        } else if (m.k === 'insights') {
           this.setInsights(m.s, m.top, m.b);
           this.insightsDigest.set(m.idg);
+        } else if (m.summary[2] >= this.summary.get()[2]) {
+          m.rows.forEach((r, i) => this.rows[i]?.set(r.slice()));
+          this.summary.set(m.summary.slice());
         }
+        return;
+      case 'row':
+        if (this.kind !== 'list' || m.i >= this.itemCount || m.s < this.seq || m.summary[2] < this.summary.get()[2]) return;
+        if (this.xr) this.marks.mark('xr.js', `s=${m.s}`);
+        this.seq = m.s;
+        this.rows[m.i].set(m.row.slice());
+        if (m.summary.some((v, i) => v !== this.summary.get()[i])) this.summary.set(m.summary.slice());
         return;
       case 'v':
         if (this.xr) {
